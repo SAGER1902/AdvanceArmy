@@ -9,60 +9,100 @@ import wmlib.common.bullet.EntityBullet;
 import wmlib.common.bullet.EntityShell;
 import advancearmy.event.SASoundEvent;
 
-import net.minecraft.world.level.Level;
+import net.minecraft.world.Difficulty;
+import net.minecraft.world.World;
+import net.minecraft.world.server.ServerWorld;
 
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.resources.ResourceLocation;
 
-import net.minecraft.network.chat.Component;
+import net.minecraft.util.DamageSource;
+import net.minecraft.util.Hand;
+import net.minecraft.util.ResourceLocation;
 
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.core.BlockPos;
-import net.minecraft.util.Mth;
-import net.minecraft.world.phys.Vec3;
-import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.text.TranslationTextComponent;
 
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.util.DamageSource;
+import net.minecraft.util.SoundEvent;
+import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.SoundEvents;
 
-import net.minecraft.world.entity.Mob;
+import net.minecraft.item.Items;
+import net.minecraft.item.Item;
+import net.minecraft.block.Blocks;
 
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.item.ItemStack;
+import net.minecraft.scoreboard.Team;
+import net.minecraft.block.material.Material;
 
-import net.minecraftforge.network.PlayMessages;
+import net.minecraft.network.IPacket;
+import net.minecraft.network.datasync.DataParameter;
+import net.minecraft.network.datasync.DataSerializers;
+import net.minecraft.network.datasync.EntityDataManager;
+
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.NBTUtil;
+
+import net.minecraft.entity.ai.attributes.AttributeModifierMap;
+import net.minecraft.entity.ai.attributes.Attributes;
+
+import net.minecraft.entity.IRangedAttackMob;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.monster.IMob;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.AgeableEntity;
+
+import net.minecraft.entity.CreatureEntity;
+import net.minecraft.entity.LivingEntity;
+
+import net.minecraft.entity.MobEntity;
+import net.minecraft.entity.MoverType;
+import net.minecraft.entity.EntitySize;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.Pose;
+
+import net.minecraftforge.fml.network.FMLPlayMessages;
+import net.minecraftforge.fml.network.NetworkHooks;
 
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
-import net.minecraft.world.entity.ai.goal.target.OwnerHurtByTargetGoal;
-import net.minecraft.world.entity.ai.goal.target.OwnerHurtTargetGoal;
+import net.minecraft.entity.ai.goal.LookAtGoal;
+import net.minecraft.entity.ai.goal.LookRandomlyGoal;
+import net.minecraft.entity.ai.goal.NearestAttackableTargetGoal;
+import net.minecraft.entity.ai.goal.RangedAttackGoal;
+import net.minecraft.entity.ai.goal.WaterAvoidingRandomWalkingGoal;
+import net.minecraft.entity.ai.goal.FollowOwnerGoal;
+import net.minecraft.entity.ai.goal.OwnerHurtByTargetGoal;
+import net.minecraft.entity.ai.goal.OwnerHurtTargetGoal;
+
+import net.minecraft.entity.EntityPredicate;
+import java.util.function.Predicate;
 import java.util.Random;
 
+import com.hungteen.pvz.common.entity.zombie.PVZZombieEntity;
+import net.minecraft.client.Minecraft;
+import org.lwjgl.glfw.GLFW;
 import wmlib.common.living.PL_LandMove;
 import wmlib.common.living.WeaponVehicleBase;
-import net.minecraft.core.particles.ParticleTypes;
-import advancearmy.util.TargetSelect;
-import wmlib.common.living.ai.LivingSearchTargetGoalSA;
+import net.minecraft.particles.ParticleTypes;
+import net.minecraft.world.Explosion;
+import net.minecraft.pathfinding.PathNavigator;
+import net.minecraft.pathfinding.GroundPathNavigator;
 import net.minecraftforge.fml.ModList;
-import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.SoundCategory;
 import advancearmy.entity.EntitySA_Seat;
 import wmlib.common.network.PacketHandler;
 import wmlib.common.network.message.MessageVehicleAnim;
-import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.fml.network.PacketDistributor;
 import safx.SagerFX;
 import wmlib.common.living.EntityWMSeat;
 import wmlib.common.living.ai.VehicleLockGoal;
 import wmlib.common.living.ai.VehicleSearchTargetGoalSA;
 import wmlib.api.IArmy;
-import advancearmy.init.ModEntities;
 public class EntitySA_Sickle extends WeaponVehicleBase implements IArmy{
-	public EntitySA_Sickle(EntityType<? extends EntitySA_Sickle> sodier, Level worldIn) {
+	public EntitySA_Sickle(EntityType<? extends EntitySA_Sickle> sodier, World worldIn) {
 		super(sodier, worldIn);
 		seatPosX[0] = 0F;
 		seatPosY[0] = 2F;
@@ -95,8 +135,8 @@ public class EntitySA_Sickle extends WeaponVehicleBase implements IArmy{
 		this.renderHudOverlayZoom = true;
 		this.hudOverlayZoom = "wmlib:textures/misc/robot_scope.png";
 		
-		this.icon1tex = ResourceLocation.tryParse("advancearmy:textures/hud/sicklehead.png");
-		this.icon2tex = ResourceLocation.tryParse("advancearmy:textures/hud/sicklebody.png");
+		this.icon1tex = new ResourceLocation("advancearmy:textures/hud/sicklehead.png");
+		this.icon2tex = new ResourceLocation("advancearmy:textures/hud/sicklebody.png");
 		this.weaponCount = 3;
 		this.w1name = "MiniGun x 2";
 		this.w2name = "Fire Shell";
@@ -115,7 +155,7 @@ public class EntitySA_Sickle extends WeaponVehicleBase implements IArmy{
 		this.throttleMin = -2F;
 		this.thFrontSpeed = 0.3F;
 		this.thBackSpeed = -0.3F;
-		this.setMaxUpStep(1.5F);
+		this.maxUpStep = 1.5F;
 		
 		this.magazine = 400;
 		this.reload_time1 = 100;
@@ -142,17 +182,8 @@ public class EntitySA_Sickle extends WeaponVehicleBase implements IArmy{
 	public void stopUnitPassenger(){
 		this.stopPassenger();
 	}
-	public LivingEntity getLockTarget(){
-		return this.firstTarget;
-	}
 	public void setAttack(LivingEntity target){
 		this.setTarget(target);
-		if(target==null){
-			this.firstTarget=null;
-			this.clientTarget=null;
-		}else{
-			this.firstTarget=target;
-		}
 	}
 	public void setSelect(boolean stack){
 		this.setChoose(stack);
@@ -197,16 +228,16 @@ public class EntitySA_Sickle extends WeaponVehicleBase implements IArmy{
 	
     public float playerJumpPendingScale;
 	
-	public EntitySA_Sickle(PlayMessages.SpawnEntity packet, Level worldIn) {//
-		super(ModEntities.ENTITY_SICKLE.get(), worldIn);
+	public EntitySA_Sickle(FMLPlayMessages.SpawnEntity packet, World worldIn) {//
+		super(AdvanceArmy.ENTITY_SICKLE, worldIn);
 	}
 	
 	protected void registerGoals() {
 		this.goalSelector.addGoal(2, new VehicleLockGoal(this, true));
 		this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
 		this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
-		this.targetSelector.addGoal(1, new VehicleSearchTargetGoalSA<>(this, Mob.class, 10, false, (attackentity) -> {return this.CanAttack(attackentity);}));
-		this.targetSelector.addGoal(2, new VehicleSearchTargetGoalSA<>(this, Player.class, 10, false, (attackentity) -> {return this.CanAttack(attackentity);}));
+		this.targetSelector.addGoal(1, new VehicleSearchTargetGoalSA<>(this, MobEntity.class, 10, 0, false, (attackentity) -> {return this.CanAttack(attackentity);}));
+		this.targetSelector.addGoal(2, new VehicleSearchTargetGoalSA<>(this, PlayerEntity.class, 10, 0, false, (attackentity) -> {return this.CanAttack(attackentity);}));
 	}
 
     public boolean CanAttack(Entity entity){
@@ -222,9 +253,13 @@ public class EntitySA_Sickle extends WeaponVehicleBase implements IArmy{
 				}
 			if(can){
 			if(this.getTargetType()==2){
-				return TargetSelect.mobCanAttack(this,entity,this.getTarget());
+				return !(entity instanceof IMob||entity instanceof EntityWMSeat||entity instanceof WeaponVehicleBase)||entity==this.getTarget()||entity==this.targetentity;
 			}else{
-				return entity instanceof Enemy;
+				if(ModList.get().isLoaded("pvz")){
+					return entity instanceof IMob||entity instanceof PVZZombieEntity;
+				}else{
+					return entity instanceof IMob;
+				}
 			}
 			}else{
 				return false;
@@ -252,36 +287,36 @@ public class EntitySA_Sickle extends WeaponVehicleBase implements IArmy{
 	  ++this.deathTime;
 	  if (this.deathTime == 1){
 		  this.playSound(SASoundEvent.tank_explode.get(), 3.0F, 1.0F);
-		  this.level().explode(this, this.getX(), this.getY(), this.getZ(), 3, false, Level.ExplosionInteraction.NONE);
+		  this.level.explode(this, this.getX(), this.getY(), this.getZ(), 3, false, Explosion.Mode.NONE);
 	  }
 	  if (this.deathTime == 120) {
-		 this.discard(); //Forge keep data until we revive player
+		 this.remove(); //Forge keep data until we revive player
 		 this.playSound(SASoundEvent.wreck_explosion.get(), 3.0F, 1.0F);
-		 this.level().explode(this, this.getX(), this.getY(), this.getZ(), 2, false, Level.ExplosionInteraction.NONE);
+		 this.level.explode(this, this.getX(), this.getY(), this.getZ(), 2, false, Explosion.Mode.NONE);
 		 for(int i = 0; i < 20; ++i) {
 			double d0 = this.random.nextGaussian() * 0.02D;
 			double d1 = this.random.nextGaussian() * 0.02D;
 			double d2 = this.random.nextGaussian() * 0.02D;
-			this.level().addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, this.getRandomX(1.0D), this.getRandomY(), this.getRandomZ(1.0D), d0, d1, d2);
+			this.level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, this.getRandomX(1.0D), this.getRandomY(), this.getRandomZ(1.0D), d0, d1, d2);
 		 }
 	  }
 	}
     public void setAnimFire(int id)
     {
-        if(this != null && !this.level().isClientSide)
+        if(this != null && !this.level.isClientSide)
         {
             PacketHandler.getPlayChannel().send(PacketDistributor.TRACKING_ENTITY.with(() -> this), new MessageVehicleAnim(this.getId(), id));
         }
     }
 	
-	public boolean causeFallDamage(float p_225503_1_, float p_225503_2_, DamageSource damageSource) {
+	public boolean causeFallDamage(float p_225503_1_, float p_225503_2_) {
 		if(ModList.get().isLoaded("safx"))SagerFX.proxy.createFX("DropRing", null, this.getX(), this.getY(), this.getZ(), 0F, 0F, 0F, 1F);	
-		List<Entity> list = this.level().getEntities(this, this.getBoundingBox().inflate(5D, 3.0D, 5D));
+		List<Entity> list = this.level.getEntities(this, this.getBoundingBox().inflate(5D, 3.0D, 5D));
 		for(int k2 = 0; k2 < list.size(); ++k2) {
 			Entity entity = list.get(k2);
 			if(entity!=null && entity instanceof LivingEntity && entity!=this){
 				if(entity instanceof LivingEntity && this.CanAttack(entity)){
-					entity.hurt(this.damageSources().thrown(this, this), 6);
+					entity.hurt(DamageSource.thrown(this, this), 6);
 					this.setMovePitch(0);
 					this.playSound(SASoundEvent.sickle_land.get(), 5.0F,1);
 				}
@@ -296,33 +331,33 @@ public class EntitySA_Sickle extends WeaponVehicleBase implements IArmy{
 	public void tick() {
 		super.tick();
 		if(this.canAddPassenger(null)){
-			EntitySA_Seat seat = new EntitySA_Seat(ModEntities.ENTITY_SEAT.get(), this.level());
+			EntitySA_Seat seat = new EntitySA_Seat(AdvanceArmy.ENTITY_SEAT, this.level);
 			seat.moveTo(this.getX(), this.getY()+1, this.getZ(), 0, 0);
-			this.level().addFreshEntity(seat);
+			this.level.addFreshEntity(seat);
 			seat.startRiding(this);
 		}
 		
 		{
-			if (!this.level().isClientSide && this.fallDistance > 3.0F) {
+			if (!this.level.isClientSide && this.fallDistance > 3.0F) {
 				this.playerJumpPendingScale = 0.0F;
 				//this.setMovePitch(0);
 			}
 		}
 		
-		if (this.playerJumpPendingScale > 0.0F && this.getMovePitch()==0/* && this.onGround()*/) {
+		if (this.playerJumpPendingScale > 0.0F && this.getMovePitch()==0/* && this.onGround*/) {
 		   double d0 = 2D * (double)this.playerJumpPendingScale * (double)this.getBlockJumpFactor();
-		   Vec3 vector3d = this.getDeltaMovement();
+		   Vector3d vector3d = this.getDeltaMovement();
            this.setDeltaMovement(/*(playerJumpPendingScale+1.5F)*/vector3d.x, d0+this.enc_power, /*(playerJumpPendingScale+1.5F)*/vector3d.z);
 		   /*if (f1 > 0.0F) */{
-			  float f2 = Mth.sin(this.yHeadRot * ((float)Math.PI / 180F));
-			  float f3 = Mth.cos(this.yHeadRot * ((float)Math.PI / 180F));
+			  float f2 = MathHelper.sin(this.yHeadRot * ((float)Math.PI / 180F));
+			  float f3 = MathHelper.cos(this.yHeadRot * ((float)Math.PI / 180F));
 			  this.setDeltaMovement(this.getDeltaMovement().add((double)(-0.8F * f2 * this.playerJumpPendingScale), 0.0D, (double)(0.8F * f3 * this.playerJumpPendingScale)));
 		   }
 		   this.playerJumpPendingScale = 0.0F;
 		   this.setMovePitch(1);
 		   this.playSound(SASoundEvent.sickle_jump.get(), 4.0F,1);
 		}
-		if (this.onGround()){
+		if (this.onGround){
 			if(this.getMovePitch()>0){
 				this.playerJumpPendingScale = 0.0F;
 				this.playSound(SASoundEvent.sickle_land.get(), 5.0F,1);
@@ -333,43 +368,41 @@ public class EntitySA_Sickle extends WeaponVehicleBase implements IArmy{
 		if (this.getAnySeat(1) != null){//
 			EntitySA_Seat seat = (EntitySA_Seat)this.getAnySeat(1);
 			if(this.setSeat){
-				seat.attack_height_max = 80;
-				this.seatWeapon1(seat);
+			seat.attack_height_max = 80;
+			this.seatWeapon1(seat);
 			}
-			if(seat.getRemain1()%2==0)turretX=-turretX;
-			this.turretYaw1=seat.getYHeadRot();
-			if(seat.getXRot()<15)this.turretPitch1=seat.getXRot();
+			this.turretYaw_1=seat.getYHeadRot();
+			if(seat.xRot<15)this.turretPitch_1=seat.xRot;
 		}
 		if(this.flytime<100)++this.flytime;
 		boolean fire1 = false;
 		boolean fire2 = false;
 		boolean is_aim = false;
 		float speedy = 4;
-		if(this.tracktick % 25 == 0 && (this.getX() != this.xo || this.getZ() != this.zo) && this.onGround()){
-			if(!this.level().isClientSide)this.level().playSound((Player)null, this.getX(), this.getY(), this.getZ(), SASoundEvent.sickle_move.get(), SoundSource.WEATHER, 3.0F, 1.0F);
+		if(this.tracktick % 25 == 0 && (this.getX() != this.xo || this.getZ() != this.zo) && this.onGround){
+			if(!this.level.isClientSide)this.level.playSound((PlayerEntity)null, this.getX(), this.getY(), this.getZ(), SASoundEvent.sickle_move.get(), SoundCategory.WEATHER, 3.0F, 1.0F);
 		}
-		Player player = null;
-		if (this.getFirstSeat() != null && this.getFirstSeat().getControllingPassenger()!=null) {
+		PlayerEntity player = null;
+		if (this.getFirstSeat() != null && this.getFirstSeat().getControllingPassenger()!=null){
 			if(this.getTargetType()>0)this.setTargetType(0);//
-			EntitySA_Seat seat = (EntitySA_Seat)this.getFirstSeat();
-			player = (Player)seat.getControllingPassenger();
+			 player = (PlayerEntity)this.getFirstSeat().getAnyPassenger();
+			//PL_LandMove.moveRobotMode(player, this, this.MoveSpeed, turnSpeed);
 			
 			float follow = player.yHeadRot;
 			follow = this.clampYaw(follow);
 			this.setMoveYaw(follow);
-			if(player.getXRot()>0){
-				this.turretPitch = player.getXRot()*0.8F;
-				this.setXRot(this.turretPitch);
+			if(player.xRot>0){
+				this.xRot = this.turretPitch = player.xRot*0.8F;
 			}else{
-				this.turretPitch = player.getXRot()*1.2F;
-				this.setXRot(this.turretPitch);
+				this.xRot = this.turretPitch = player.xRot*1.2F;
 			}
 			if(player.yHeadRot>=0){
 				this.turretYaw = player.yHeadRot*0.995F;
 			}else{
 				this.turretYaw = player.yHeadRot*1.005F;
 			}
-			{
+			if (this.getFirstSeat() != null) {
+				EntitySA_Seat seat = (EntitySA_Seat)this.getFirstSeat();
 				if(seat.fire2){
 					/*if(this.getRemain3() > 0)*/{
 						this.setRemain3(0);
@@ -415,16 +448,15 @@ public class EntitySA_Sickle extends WeaponVehicleBase implements IArmy{
 				if(is_move) {
 					if(f <= turnSpeed*2 && f >= -turnSpeed*2){
 						this.yHeadRot = this.getMoveYaw();
-						this.yBodyRot = this.yHeadRot;
-						this.setYRot(this.yHeadRot);
+						this.yRot = this.yBodyRot = this.yHeadRot;
 					}else if(f2 > 0.1F){
 						this.yHeadRot -= turnSpeed;
 						this.yBodyRot -= turnSpeed;
-						this.setYRot(this.getYRot()-turnSpeed);
+						this.yRot -= turnSpeed;
 					}else if(f2 < -0.1F){
 						this.yHeadRot += turnSpeed;
 						this.yBodyRot += turnSpeed;
-						this.setYRot(this.getYRot()+turnSpeed);
+						this.yRot += turnSpeed;
 					}
 				}
 			}
@@ -439,33 +471,31 @@ public class EntitySA_Sickle extends WeaponVehicleBase implements IArmy{
 		}
 		
 		if(this.getTargetType()>0){
-			if (this.getFirstSeat() != null){
+			if (this.getFirstSeat() != null) {
 				EntitySA_Seat seat = (EntitySA_Seat)this.getFirstSeat();
-				if(seat.getTargetType()==0&&this.enc_soul==0 && this.getTargetType()!=1)this.setTargetType(1);//空
+				//if(seat.getTargetType()==0 && this.getTargetType()!=1)this.setTargetType(1);//空
 				if(seat.getTargetType()==2 && this.getTargetType()!=2)this.setTargetType(2);//敌
 				if(seat.getTargetType()==3 && this.getTargetType()!=3)this.setTargetType(3);//友
 			}
 			if(this.getTargetType()>1){
-				
 				if(this.getMoveType()==0 && this.getOwner()!=null && followTime>30){
 					if(this.distanceTo(this.getOwner())>12){
-					this.setMovePosX((int)this.getOwner().getX());
-					this.setMovePosY((int)this.getOwner().getY());
-					this.setMovePosZ((int)this.getOwner().getZ());
+						this.setMovePosX((int)this.getOwner().getX());
+						this.setMovePosY((int)this.getOwner().getY());
+						this.setMovePosZ((int)this.getOwner().getZ());
 						followTime=0;
 					}
 				}
-				
 				if((this.getMovePosX()!=0||this.getMovePosZ()!=0)&&(this.getMoveType()==0||this.getMoveType()==2||!this.isAttacking()&&this.getMoveType()==4)){
 					double dx = this.getMovePosX() - this.getX();
 					double dz = this.getMovePosZ() - this.getZ();
-					double dis = Math.sqrt(dx * dx + dz * dz);
+					double dis = MathHelper.sqrt(dx * dx + dz * dz);
 					if(dis>5){
 						if(dis>20 && this.flytime > 50){
 							if(this.flytime > 60)this.flytime = 0;
 							this.playerJumpPendingScale = 1;
 						}
-						this.moveyaw = (float) Mth.atan2(dz, dx) * (180F / (float) Math.PI) - 90.0f;
+						this.moveyaw = (float) MathHelper.atan2(dz, dx) * (180F / (float) Math.PI) - 90.0f;
 						this.moveyaw = this.clampYaw(this.moveyaw);
 						if(!this.isAttacking()){
 							this.setMoveYaw(this.moveyaw);
@@ -475,17 +505,16 @@ public class EntitySA_Sickle extends WeaponVehicleBase implements IArmy{
 						if (f3 > this.turnSpeed*1.5F) {
 							this.yHeadRot -= turnSpeed;
 							this.yBodyRot -= turnSpeed;
-							this.setYRot(this.getYRot()-turnSpeed);
+							this.yRot -= turnSpeed;
 						} else if (f3 < -this.turnSpeed*1.5F) {
 							this.yHeadRot += turnSpeed;
 							this.yBodyRot += turnSpeed;
-							this.setYRot(this.getYRot()+turnSpeed);
+							this.yRot += turnSpeed;
 						}else{
 							//this.setStrafingMove(0);
 						}
 						if(f3>-this.turnSpeed*2F&&f3<this.turnSpeed*2F){
-							this.yBodyRot=this.yHeadRot=this.moveyaw;
-							this.setYRot(this.moveyaw);
+							this.yRot=this.yBodyRot=this.yHeadRot=this.moveyaw;
 							this.setForwardMove(2);
 						}else{
 							this.setForwardMove(-2);
@@ -511,17 +540,17 @@ public class EntitySA_Sickle extends WeaponVehicleBase implements IArmy{
 						double ddy = Math.abs(target.getY() - this.getY());
 						double dyy = this.getY()+3.29F - target.getEyeY();
 						double dis = Math.sqrt(dx * dx + dz * dz);
-						this.targetYaw = (float) Mth.atan2(dz, dx) * (180F / (float) Math.PI) - 90.0f;
+						this.targetYaw = (float) MathHelper.atan2(dz, dx) * (180F / (float) Math.PI) - 90.0f;
 						this.targetYaw = this.clampYaw(this.targetYaw);
 						this.setMoveYaw(this.targetYaw);
 						float f11 = (float) (Math.atan2(dyy, dis) * 180.0D / Math.PI);
 						this.setAttacking(true);
 						if(this.getMoveType() == 1||this.getTargetType()==2 && this.getMoveType()!=2&&this.getMoveType()!=4){
 							if(this.find_time<40)++this.find_time;
-							if(this.level().random.nextInt(6) > 3 && this.find_time > 20){
+							if(this.level.random.nextInt(6) > 3 && this.find_time > 20){
 								this.find_time = 0;
-								this.setAIType(this.level().random.nextInt(7));
-							}else if(this.level().random.nextInt(6) < 3 && this.find_time > 20){
+								this.setAIType(this.level.random.nextInt(7));
+							}else if(this.level.random.nextInt(6) < 3 && this.find_time > 20){
 								this.find_time = 0;
 								this.setAIType(0);
 							}
@@ -529,7 +558,7 @@ public class EntitySA_Sickle extends WeaponVehicleBase implements IArmy{
 								float f3 = this.yHeadRot - this.getMoveYaw();
 								f3 = this.clampYaw(f3);
 								if(f3>-4F&&f3<4F && this.getAIType()>3){
-									if(target.getMaxHealth()<100)this.setForwardMove(2);
+									if(target.getMaxHealth()<100 && !this.isthrow)this.setForwardMove(2);
 								}
 							}else if(dis < 6){//
 								crash = true;
@@ -549,8 +578,7 @@ public class EntitySA_Sickle extends WeaponVehicleBase implements IArmy{
 								}
 							}
 						}
-						this.turretPitch = f11;
-						this.setXRot(this.turretPitch);
+						this.turretPitch = this.xRot = f11;
 						float f4 = this.turretYaw - this.getMoveYaw();
 						f4 = this.clampYaw(f4);
 						if(f4 < speedy*1.1F && f4 > -speedy*1.1F){
@@ -563,17 +591,16 @@ public class EntitySA_Sickle extends WeaponVehicleBase implements IArmy{
 							if (f3 > this.turnSpeed*1.5F) {
 								this.yHeadRot -= turnSpeed;
 								this.yBodyRot -= turnSpeed;
-								this.setYRot(this.getYRot()-turnSpeed);
+								this.yRot -= turnSpeed;
 							} else if (f3 < -this.turnSpeed*1.5F) {
 								this.yHeadRot += turnSpeed;
 								this.yBodyRot += turnSpeed;
-								this.setYRot(this.getYRot()+turnSpeed);
+								this.yRot += turnSpeed;
 							}else{
 								//this.setStrafingMove(0);
 							}
 							if(f3>-this.turnSpeed*2F&&f3<this.turnSpeed*2F){
-								this.yBodyRot=this.yHeadRot=this.getMoveYaw();
-								this.setYRot(this.getMoveYaw());
+								this.yRot=this.yBodyRot=this.yHeadRot=this.getMoveYaw();
 								//this.setForwardMove(0);
 							}else{
 								this.setForwardMove(-2);
@@ -583,10 +610,10 @@ public class EntitySA_Sickle extends WeaponVehicleBase implements IArmy{
 					}
 				}else{
 					if(!this.isAttacking()){
-						if(this.getMoveType()==1||this.getMoveType()==3){
+						if(this.getMoveType()!=2&&this.getMoveType()!=4){
 							this.setForwardMove(0);
 							this.setStrafingMove(0);
-							this.setXRot(0);
+							this.xRot = 0;
 						}
 					}
 				}
@@ -596,6 +623,7 @@ public class EntitySA_Sickle extends WeaponVehicleBase implements IArmy{
 		}
 		
 		if(fire1){
+
 			if(this.getArmyType2()==0){
 				if(cooltime>2){
 					this.counter1 = true;
@@ -655,20 +683,20 @@ public class EntitySA_Sickle extends WeaponVehicleBase implements IArmy{
 		double y = this.getDeltaMovement().y();
 		double z = 0;
 		if (this.getStrafingMove() < -0.5F) {
-			x += Mth.sin(this.yHeadRot * 0.01745329252F - 1.57F) * MoveSpeed * 5;
-			z -= Mth.cos(this.yHeadRot * 0.01745329252F - 1.57F) * MoveSpeed * 5;
+			x += MathHelper.sin(this.yHeadRot * 0.01745329252F - 1.57F) * MoveSpeed * 5;
+			z -= MathHelper.cos(this.yHeadRot * 0.01745329252F - 1.57F) * MoveSpeed * 5;
 		}
 		if (this.getStrafingMove() > 0.5F) {
-			x += Mth.sin(this.yHeadRot * 0.01745329252F + 1.57F) * MoveSpeed * 5;
-			z -= Mth.cos(this.yHeadRot * 0.01745329252F + 1.57F) * MoveSpeed * 5;
+			x += MathHelper.sin(this.yHeadRot * 0.01745329252F + 1.57F) * MoveSpeed * 5;
+			z -= MathHelper.cos(this.yHeadRot * 0.01745329252F + 1.57F) * MoveSpeed * 5;
 		}
 		if (this.getForwardMove() > 0.5F) {
-			x -= Mth.sin(f1) * MoveSpeed * 5;
-			z += Mth.cos(f1) * MoveSpeed * 5;
+			x -= MathHelper.sin(f1) * MoveSpeed * 5;
+			z += MathHelper.cos(f1) * MoveSpeed * 5;
 		}
 		if (this.getForwardMove() < -0.5F) {
-			x -= Mth.sin(f1) * MoveSpeed * -5;
-			z += Mth.cos(f1) * MoveSpeed * -5;
+			x -= MathHelper.sin(f1) * MoveSpeed * -5;
+			z += MathHelper.cos(f1) * MoveSpeed * -5;
 		}
 		{
 			float aim_sp = 1;
@@ -691,6 +719,7 @@ public class EntitySA_Sickle extends WeaponVehicleBase implements IArmy{
 		String tex = "advancearmy:textures/entity/bullet/bullet5.png";
 		String fx1 = "SmokeGun";
 		String fx2 = null;
+		if(seat.getRemain1()%2==0)turretX=-turretX;
 		seat.setWeapon(0, 3, model, tex, fx1, fx2, SASoundEvent.gun4.get(), turretX,0F,2F,0,0.2F,
 		14, 6F, 1.25F, 0, false, 1, 0.01F, 20, 0);
 	}
@@ -699,42 +728,42 @@ public class EntitySA_Sickle extends WeaponVehicleBase implements IArmy{
 		double xx11 = 0;
 		double zz11 = 0;
 		float base = 0;
-		base = (float)Mth.sqrt((float)((z - bz)* (z - bz) + (w - bx)*(w - bx))) * Mth.sin(-this.getXRot()  * (1 * (float) Math.PI / 180));
-		xx11 -= Mth.sin(this.turretYaw * 0.01745329252F) * z;
-		zz11 += Mth.cos(this.turretYaw * 0.01745329252F) * z;
-		xx11 -= Mth.sin(this.turretYaw * 0.01745329252F + 1) * w;
-		zz11 += Mth.cos(this.turretYaw * 0.01745329252F + 1) * w;
+		base = MathHelper.sqrt((z - bz)* (z - bz) + (w - bx)*(w - bx)) * MathHelper.sin(-this.xRot  * (1 * (float) Math.PI / 180));
+		xx11 -= MathHelper.sin(this.turretYaw * 0.01745329252F) * z;
+		zz11 += MathHelper.cos(this.turretYaw * 0.01745329252F) * z;
+		xx11 -= MathHelper.sin(this.turretYaw * 0.01745329252F + 1) * w;
+		zz11 += MathHelper.cos(this.turretYaw * 0.01745329252F + 1) * w;
 		LivingEntity shooter = this;
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
-		EntityShell bullet = new EntityShell(this.level(), shooter);
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
+		EntityShell bullet = new EntityShell(this.level, shooter);
 		bullet.power = 60;
 		bullet.setExLevel(2);
 		bullet.setModel("wmlib:textures/entity/flare.obj");
 		bullet.setTex("wmlib:textures/entity/flare.png");
 		bullet.setGravity(0.01F);
 		bullet.setBulletType(9);
-		bullet.moveTo(this.getX() + xx11, this.getY()+h+base, this.getZ() + zz11, this.yHeadRot, this.getXRot());
+		bullet.moveTo(this.getX() + xx11, this.getY()+h+base, this.getZ() + zz11, this.yHeadRot, this.xRot);
 		bullet.shootFromRotation(this, this.turretPitch, this.turretYaw, 0.0F, 4F, 2);
-		if (!this.level().isClientSide) this.level().addFreshEntity(bullet);
+		if (!this.level.isClientSide) this.level.addFreshEntity(bullet);
 	}
 	public void AIWeapon1(double w, double h, double z, double bx, double bz){
 		double xx11 = 0;
 		double zz11 = 0;
 		float base = 0;
-		base = Mth.sqrt((float)((z - bz)* (z - bz) + (w - bx)*(w - bx))) * Mth.sin(-this.getXRot()  * (1 * (float) Math.PI / 180));
-		xx11 -= Mth.sin(this.turretYaw * 0.01745329252F) * z;
-		zz11 += Mth.cos(this.turretYaw * 0.01745329252F) * z;
-		xx11 -= Mth.sin(this.turretYaw * 0.01745329252F + 1) * w;
-		zz11 += Mth.cos(this.turretYaw * 0.01745329252F + 1) * w;
+		base = MathHelper.sqrt((z - bz)* (z - bz) + (w - bx)*(w - bx)) * MathHelper.sin(-this.xRot  * (1 * (float) Math.PI / 180));
+		xx11 -= MathHelper.sin(this.turretYaw * 0.01745329252F) * z;
+		zz11 += MathHelper.cos(this.turretYaw * 0.01745329252F) * z;
+		xx11 -= MathHelper.sin(this.turretYaw * 0.01745329252F + 1) * w;
+		zz11 += MathHelper.cos(this.turretYaw * 0.01745329252F + 1) * w;
 		LivingEntity shooter = this;
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
-		EntityBullet bullet = new EntityBullet(this.level(), shooter);
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
+		EntityBullet bullet = new EntityBullet(this.level, shooter);
 		bullet.power = 8;
 		bullet.setModel("advancearmy:textures/entity/bullet/bullet3.obj");
 		bullet.setTex("advancearmy:textures/entity/bullet/bullet3.png");
 		bullet.setGravity(0.01F);
-		bullet.moveTo(this.getX() + xx11, this.getY()+h+base, this.getZ() + zz11, this.yHeadRot, this.getXRot());
+		bullet.moveTo(this.getX() + xx11, this.getY()+h+base, this.getZ() + zz11, this.yHeadRot, this.xRot);
 		bullet.shootFromRotation(this, this.turretPitch, this.turretYaw, 0.0F, 6F, 2);
-		if (!this.level().isClientSide) this.level().addFreshEntity(bullet);
+		if (!this.level.isClientSide) this.level.addFreshEntity(bullet);
 	}
 }

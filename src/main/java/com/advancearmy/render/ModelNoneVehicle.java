@@ -1,31 +1,42 @@
 package advancearmy.render;
+
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL12;
+
 import com.google.common.collect.ImmutableList;
-import net.minecraft.client.model.AgeableListModel;
-import net.minecraft.client.model.geom.ModelPart;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.entity.model.AgeableModel;
+import net.minecraft.client.renderer.model.ModelRenderer;
+import net.minecraft.entity.passive.BeeEntity;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.MathHelper;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraft.world.entity.Entity;
+import net.minecraft.entity.Entity;
+//import wmlib.common.living.EntityWMVehicleBase;
 @OnlyIn(Dist.CLIENT)
-public class ModelNoneVehicle<T extends Entity> extends AgeableListModel<T> {
-    //private final ModelPart bone;
-    public ModelNoneVehicle() {
-        //this.bone = new ModelPart(this);
-        //this.bone.setTexSize(64, 64); // 设置纹理尺寸（根据实际纹理调整）
-    }
-    @Override
-    public void prepareMobModel(T entity, float limbSwing, float limbSwingAmount, float partialTicks) {
-        super.prepareMobModel(entity, limbSwing, limbSwingAmount, partialTicks);
-    }
-    @Override
-    public void setupAnim(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
-        // 空实现，无动画逻辑
-    }
-    @Override
-    protected Iterable<ModelPart> headParts() {
-        return ImmutableList.of();
-    }
-    @Override
-    protected Iterable<ModelPart> bodyParts() {
-        return ImmutableList.of();
-    }
+public class ModelNoneVehicle<T extends Entity> extends AgeableModel<T> {
+   public ModelNoneVehicle() {
+	   super(false, 24.0F, 0.0F);
+	   this.bone = new ModelRenderer(this);
+   }
+
+	private final ModelRenderer bone;
+   
+   public void prepareMobModel(T p_212843_1_, float p_212843_2_, float p_212843_3_, float p_212843_4_) {
+	      super.prepareMobModel(p_212843_1_, p_212843_2_, p_212843_3_, p_212843_4_);
+	}
+   public void setupAnim(T p_225597_1_, float p_225597_2_, float p_225597_3_, float p_225597_4_, float p_225597_5_, float p_225597_6_) {
+
+	}
+
+   protected Iterable<ModelRenderer> headParts() {
+	  return ImmutableList.of();
+   }
+
+   protected Iterable<ModelRenderer> bodyParts() {
+	  return ImmutableList.of(this.bone);
+   }
 }

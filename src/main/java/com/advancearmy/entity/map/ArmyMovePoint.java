@@ -7,82 +7,111 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.function.Predicate;
 import javax.annotation.Nullable;
-import net.minecraft.world.Difficulty;
-import net.minecraft.world.level.Level;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageTypes;
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.scores.Team;
-import net.minecraft.network.syncher.EntityDataAccessor;  
-import net.minecraft.network.syncher.EntityDataSerializers;
-import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtUtils;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.MoverType;
-import net.minecraft.world.entity.EntityDimensions;
-import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.network.PlayMessages;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.TamableAnimal;
-import net.minecraft.world.entity.AgeableMob;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Item;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.item.Items;
-import net.minecraft.network.chat.Component;
-import net.minecraft.util.Mth;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
+import net.minecraft.entity.CreatureAttribute;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntitySize;
+import net.minecraft.entity.EntitySpawnPlacementRegistry;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.ILivingEntityData;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.Pose;
+import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.ai.attributes.AttributeModifier;
+import net.minecraft.entity.ai.attributes.AttributeModifierMap;
+import net.minecraft.entity.ai.attributes.Attributes;
+import net.minecraft.entity.ai.attributes.ModifiableAttributeInstance;
 
-import wmlib.common.living.WeaponVehicleBase;
+import net.minecraft.entity.merchant.villager.AbstractVillagerEntity;
+import net.minecraft.entity.merchant.villager.VillagerEntity;
+import net.minecraft.entity.passive.ChickenEntity;
+import net.minecraft.entity.passive.IronGolemEntity;
+import net.minecraft.entity.passive.TurtleEntity;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.inventory.EquipmentSlotType;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.NBTDynamicOps;
+import net.minecraft.network.datasync.DataParameter;
+import net.minecraft.network.datasync.DataSerializers;
+import net.minecraft.network.datasync.EntityDataManager;
+import net.minecraft.pathfinding.GroundPathNavigator;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.util.DamageSource;
+import net.minecraft.util.EntityPredicates;
+import net.minecraft.util.GroundPathHelper;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.SoundEvent;
+import net.minecraft.util.SoundEvents;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.world.Difficulty;
+import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.GameRules;
+import net.minecraft.world.IServerWorld;
+import net.minecraft.world.IWorld;
+import net.minecraft.world.World;
+import net.minecraft.world.server.ServerWorld;
+import net.minecraft.world.spawner.WorldEntitySpawner;
+import net.minecraft.entity.monster.IMob;
+import net.minecraft.entity.MobEntity;
+import advancearmy.AdvanceArmy;
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.Style;
+import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.ActionResultType;
+import net.minecraft.util.Hand;
+import net.minecraft.item.Item;
+
+import net.minecraftforge.fml.network.FMLPlayMessages;
+import net.minecraftforge.fml.network.NetworkHooks;
+import advancearmy.entity.ai.WaterAvoidingRandomWalkingGoalSA;
+import net.minecraft.item.ArmorItem;
+import com.mrcrayfish.guns.item.GunItem;
+import net.minecraft.pathfinding.GroundPathNavigator;
+
+import net.minecraftforge.fml.ModList;
+import net.minecraft.entity.CreatureEntity;
+
+import advancearmy.entity.land.EntitySA_T90;
+import advancearmy.entity.land.EntitySA_T72;
+import advancearmy.entity.EntitySA_LandBase;
+import net.minecraft.world.server.ServerBossInfo;
+import net.minecraft.world.BossInfo;
 import wmlib.common.living.EntityWMSeat;
+import wmlib.common.living.EntityWMVehicleBase;
+import wmlib.common.living.ai.LivingSearchTargetGoalSA;
+import wmlib.api.IEnemy;
+import net.minecraft.entity.player.ServerPlayerEntity;
+import wmlib.common.living.WeaponVehicleBase;
+
+import advancearmy.entity.air.EntitySA_Plane1;
+import advancearmy.entity.air.EntitySA_Plane2;
+
 import advancearmy.entity.EntitySA_SoldierBase;
 import advancearmy.entity.mob.EntityMobSoldierBase;
-import advancearmy.event.SASoundEvent;
-import advancearmy.item.ItemSpawn;
-import advancearmy.AdvanceArmy;
-import advancearmy.init.ModEntities;
-import wmlib.api.IHealthBar;
 import wmlib.api.ITool;
-import wmlib.api.IEnemy;
-import net.minecraft.tags.ItemTags;
-public class ArmyMovePoint extends Mob implements ITool{
-	public ArmyMovePoint(EntityType<? extends ArmyMovePoint> p_i48549_1_, Level p_i48549_2_) {
+
+import net.minecraft.item.PickaxeItem;
+public class ArmyMovePoint extends MobEntity implements ITool{
+	public ArmyMovePoint(EntityType<? extends ArmyMovePoint> p_i48549_1_, World p_i48549_2_) {
 	  super(p_i48549_1_, p_i48549_2_);
 	}
-	public ArmyMovePoint(PlayMessages.SpawnEntity packet, Level worldIn) {
-		super(ModEntities.ENTITY_MOVEP.get(), worldIn);
+	public ArmyMovePoint(FMLPlayMessages.SpawnEntity packet, World worldIn) {
+		super(AdvanceArmy.ENTITY_MOVEP, worldIn);
 	}
-	public static AttributeSupplier.Builder createAttributes() {
-        return ArmyMovePoint.createMobAttributes();
-    }
-	
 	public void checkDespawn() {
 	}
-	private static final EntityDataAccessor<Integer> MoveId = SynchedEntityData.<Integer>defineId(ArmyMovePoint.class, EntityDataSerializers.INT);
-	public void addAdditionalSaveData(CompoundTag compound)
+	private static final DataParameter<Integer> MoveId = EntityDataManager.<Integer>defineId(ArmyMovePoint.class, DataSerializers.INT);
+	public void addAdditionalSaveData(CompoundNBT compound)
 	{
 		super.addAdditionalSaveData(compound);
 		compound.putInt("MoveId", this.getMoveId());
 	}
-	public void readAdditionalSaveData(CompoundTag compound)
+	public void readAdditionalSaveData(CompoundNBT compound)
 	{
 	   super.readAdditionalSaveData(compound);
 	   this.setMoveId(compound.getInt("MoveId"));
@@ -99,76 +128,71 @@ public class ArmyMovePoint extends Mob implements ITool{
 	this.entityData.set(MoveId, Integer.valueOf(stack));
 	}
 	
-	public InteractionResult mobInteract(Player player, InteractionHand hand) {
+	public ActionResultType mobInteract(PlayerEntity player, Hand hand) {
 		if(player.isCreative()){
 			ItemStack heldItem = player.getItemInHand(hand);
 			Item item = heldItem.getItem();
+
 			if(!heldItem.isEmpty()){
-				if(heldItem.is(ItemTags.PICKAXES)&&player.isCrouching()){
-					if(!this.level().isClientSide){
-						this.discard();
-						player.sendSystemMessage(Component.translatable("Remove"));
-						return InteractionResult.SUCCESS;
+				if(heldItem.getItem() instanceof PickaxeItem && player.isCrouching()){
+					if(!this.level.isClientSide){
+						this.remove();
+						player.sendMessage(new TranslationTextComponent("Remove", new Object[0]), player.getUUID());
+						return ActionResultType.SUCCESS;
 					}
 				}else
-				if(!this.level().isClientSide){
+				if(!this.level.isClientSide){
 					if(item == Items.GOLD_INGOT){
 						if(isEnemyPoint){
-							this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.DIAMOND));
-							player.sendSystemMessage(Component.translatable("set Friend Type"));
-							return InteractionResult.SUCCESS;
+							this.setItemSlot(EquipmentSlotType.MAINHAND, new ItemStack(Items.DIAMOND));
+							player.sendMessage(new TranslationTextComponent("set Friend Type", new Object[0]), player.getUUID());
+							return ActionResultType.SUCCESS;
 						}else{
-							this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_INGOT));
-							player.sendSystemMessage(Component.translatable("set Enemy Type"));
-							return InteractionResult.SUCCESS;
+							this.setItemSlot(EquipmentSlotType.MAINHAND, new ItemStack(Items.IRON_INGOT));
+							player.sendMessage(new TranslationTextComponent("set Enemy Type", new Object[0]), player.getUUID());
+							return ActionResultType.SUCCESS;
 						}
 					}else if(item == Items.GOLDEN_SWORD){
 						if(this.pointType==3){
-							this.setItemSlot(EquipmentSlot.OFFHAND, new ItemStack(Items.IRON_SWORD));
-							player.sendSystemMessage(Component.translatable("set Land Vehicle Type"));
-							return InteractionResult.SUCCESS;
+							this.setItemSlot(EquipmentSlotType.OFFHAND, new ItemStack(Items.IRON_SWORD));
+							player.sendMessage(new TranslationTextComponent("set Land Vehicle Type", new Object[0]), player.getUUID());
+							return ActionResultType.SUCCESS;
 						}else if(this.pointType==2){
-							this.setItemSlot(EquipmentSlot.OFFHAND, new ItemStack(Items.GOLDEN_SWORD));
-							player.sendSystemMessage(Component.translatable("set Heli Type"));
-							return InteractionResult.SUCCESS;
+							this.setItemSlot(EquipmentSlotType.OFFHAND, new ItemStack(Items.GOLDEN_SWORD));
+							player.sendMessage(new TranslationTextComponent("set Heli Type", new Object[0]), player.getUUID());
+							return ActionResultType.SUCCESS;
 						}else{
-							this.setItemSlot(EquipmentSlot.OFFHAND, new ItemStack(Items.DIAMOND_SWORD));
-							player.sendSystemMessage(Component.translatable("set Plane Type"));
-							return InteractionResult.SUCCESS;
+							this.setItemSlot(EquipmentSlotType.OFFHAND, new ItemStack(Items.DIAMOND_SWORD));
+							player.sendMessage(new TranslationTextComponent("set Plane Type", new Object[0]), player.getUUID());
+							return ActionResultType.SUCCESS;
 						}
 					}
 				}else{
-					return InteractionResult.PASS;
+					return ActionResultType.PASS;
 				}
 			}else{
 				if(player.isCrouching()){
 					if(this.getMoveId()>0)this.setMoveId(this.getMoveId()-1);
-					return InteractionResult.SUCCESS;
+					return ActionResultType.SUCCESS;
 				}else{
 					this.setMoveId(this.getMoveId()+1);
-					return InteractionResult.SUCCESS;
+					return ActionResultType.SUCCESS;
 				}
 			}
-			player.sendSystemMessage(Component.translatable("------"));
+			player.sendMessage(new TranslationTextComponent("------", new Object[0]), player.getUUID());
 			if(isEnemyPoint){
-				player.sendSystemMessage(Component.translatable("Enemy Type"));
+				player.sendMessage(new TranslationTextComponent("Enemy Type", new Object[0]), player.getUUID());
 			}else{
-				player.sendSystemMessage(Component.translatable("Friend Type"));
+				player.sendMessage(new TranslationTextComponent("Friend Type", new Object[0]), player.getUUID());
 			}
-			player.sendSystemMessage(Component.translatable("Move ID ="+this.getMoveId()));
-			player.sendSystemMessage(Component.translatable("======"));
+			player.sendMessage(new TranslationTextComponent("Move ID ="+this.getMoveId(), new Object[0]), player.getUUID());
+			player.sendMessage(new TranslationTextComponent("======", new Object[0]), player.getUUID());
 		}
 		return super.mobInteract(player, hand);
     }
 	/*public boolean canBeCollidedWith() {//
 		return false;
 	}*/
-	public boolean canCollideWith(Entity entity) {
-		return false;
-	}
-	public void push(Entity entity) {
-		
-	}
 	
 	public int pointType = 0;
 	public int connectRange = 50;
@@ -190,9 +214,9 @@ public class ArmyMovePoint extends Mob implements ITool{
     		this.setz=((int)this.getZ());
     	}
     	{
-			BlockPos blockpos = new BlockPos((int)(this.setx),(int)(this.sety - 1),(int)(this.setz));
-			BlockState iblockstate = this.level().getBlockState(blockpos);
-			if (this.setx != 0 && !iblockstate.isAir()){
+			BlockPos blockpos = new BlockPos(this.setx + 0.5,this.sety - 1,this.setz + 0.5);
+			BlockState iblockstate = this.level.getBlockState(blockpos);
+			if (this.setx != 0 && !iblockstate.isAir(this.level, blockpos)){
 				this.moveTo(this.setx,this.sety,this.setz);
 			}else{
 				this.moveTo(this.setx,this.getY(), this.setz);
@@ -221,21 +245,21 @@ public class ArmyMovePoint extends Mob implements ITool{
 		}
 		
 		if (this.isAlive()){
-			//this.bossEvent.setProgress(this.getHealth() / this.getMaxHealth());
+			//this.bossEvent.setPercent(this.getHealth() / this.getMaxHealth());
 			if(cooltime6<50)++cooltime6;
-			/*if (!(this.level() instanceof ServerLevel)) {
+			/*if (!(this.level instanceof ServerWorld)) {
 				//return false;
 			} else */{
-			//ServerLevel serverworld = (ServerLevel)this.level();
-			int i = Mth.floor(this.getX());
-			int j = Mth.floor(this.getY());
-			int k = Mth.floor(this.getZ());
+			//ServerWorld serverworld = (ServerWorld)this.level;
+			int i = MathHelper.floor(this.getX());
+			int j = MathHelper.floor(this.getY());
+			int k = MathHelper.floor(this.getZ());
 			if(summontime<100)++summontime;
 			if(summontime>10){//
-				int i1 = i + Mth.nextInt(this.random, 2, 4) * Mth.nextInt(this.random, -1, 1);
-				int j1 = j + Mth.nextInt(this.random, 2, 3);
-				int k1 = k + Mth.nextInt(this.random, 2, 4) * Mth.nextInt(this.random, -1, 1);
-				List<Entity> list = this.level().getEntities(this, this.getBoundingBox().inflate(connectRange, connectRange*2F, connectRange));
+				int i1 = i + MathHelper.nextInt(this.random, 2, 4) * MathHelper.nextInt(this.random, -1, 1);
+				int j1 = j + MathHelper.nextInt(this.random, 2, 3);
+				int k1 = k + MathHelper.nextInt(this.random, 2, 4) * MathHelper.nextInt(this.random, -1, 1);
+				List<Entity> list = this.level.getEntities(this, this.getBoundingBox().inflate(connectRange, connectRange*2F, connectRange));
 				for(int k2 = 0; k2 < list.size(); ++k2) {
 					Entity ent = list.get(k2);
 					if(ent!=null && ent.getVehicle()==null && !(ent instanceof EntityWMSeat)){

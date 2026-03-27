@@ -1,25 +1,24 @@
 package advancearmy.entity.land;
 import net.minecraftforge.fml.ModList;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import advancearmy.init.ModEntities;
-import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.network.PlayMessages;
+import net.minecraft.world.World;
+import net.minecraft.entity.ai.attributes.AttributeModifierMap;
+import net.minecraft.entity.ai.attributes.Attributes;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.EntityType;
+import net.minecraftforge.fml.network.FMLPlayMessages;
 import wmlib.common.living.WeaponVehicleBase;
 import advancearmy.entity.ai.AI_EntityWeapon;
 import advancearmy.AdvanceArmy;
 import advancearmy.event.SASoundEvent;
 import safx.SagerFX;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.ResourceLocation;
 import wmlib.client.obj.SAObjModel;
 import advancearmy.entity.EntitySA_LandBase;
 import advancearmy.entity.EntitySA_Seat;
-import net.minecraft.network.chat.Component;
+import net.minecraft.util.text.TranslationTextComponent;
 public class EntitySA_FTK extends EntitySA_LandBase{
-	public EntitySA_FTK(EntityType<? extends EntitySA_FTK> sodier, Level worldIn) {
+	public EntitySA_FTK(EntityType<? extends EntitySA_FTK> sodier, World worldIn) {
 		super(sodier, worldIn);
 		seatPosX[0] = 1.07F;
 		seatPosY[0] = 1.1F;
@@ -32,8 +31,8 @@ public class EntitySA_FTK extends EntitySA_LandBase{
 		this.renderHudIcon = false;
 		this.renderHudOverlay = false;
 		this.renderHudOverlayZoom = false;
-		this.w1name = Component.translatable("advancearmy.weapon.125cannon.desc").getString();
-		this.w2name = Component.translatable("advancearmy.weapon.762gun.desc").getString();
+		this.w1name = new TranslationTextComponent("advancearmy.weapon.125cannon.desc").getString();
+		this.w2name = new TranslationTextComponent("advancearmy.weapon.762gun.desc").getString();
 		this.seatView1X = 0F;
 		this.seatView1Y = 0F;
 		this.seatView1Z = 0.01F;
@@ -52,7 +51,7 @@ public class EntitySA_FTK extends EntitySA_LandBase{
 		this.throttleMin = -2F;
 		this.thFrontSpeed = 0.3F;
 		this.thBackSpeed = -0.3F;
-		this.setMaxUpStep(1.5F);
+		this.maxUpStep = 1.5F;
 		this.canNightV=true;
 		this.ammo1=5;
 		this.ammo2=3;
@@ -66,8 +65,8 @@ public class EntitySA_FTK extends EntitySA_LandBase{
 		this.firebaseZ = 1.93F;
 		
 		this.obj = new SAObjModel("advancearmy:textures/mob/ftk_new.obj");
-		this.tex = ResourceLocation.tryParse("advancearmy:textures/mob/ftk_new.png");
-		this.tracktex = ResourceLocation.tryParse("advancearmy:textures/mob/track.png");
+		this.tex = new ResourceLocation("advancearmy:textures/mob/ftk_new.png");
+		this.tracktex = new ResourceLocation("advancearmy:textures/mob/track.png");
 		this.magazine = 1;
 		this.reload_time1 = 95;
 		this.reloadSound1 = SASoundEvent.reload_t90.get();
@@ -98,15 +97,9 @@ public class EntitySA_FTK extends EntitySA_LandBase{
 		this.setWheel(7,0, 0.84F, -3.14F);
 	}
 
-	public EntitySA_FTK(PlayMessages.SpawnEntity packet, Level worldIn) {//
-		super(ModEntities.ENTITY_FTK.get(), worldIn);
+	public EntitySA_FTK(FMLPlayMessages.SpawnEntity packet, World worldIn) {//
+		super(AdvanceArmy.ENTITY_FTK, worldIn);
 	}
-	public static AttributeSupplier.Builder createAttributes() {
-        return EntitySA_FTK.createMobAttributes().add(Attributes.KNOCKBACK_RESISTANCE, (double) 10.0D)
-					.add(Attributes.MAX_HEALTH, 550.0D)
-					.add(Attributes.FOLLOW_RANGE, 50.0D)
-					.add(Attributes.ARMOR, (double) 16D);
-    }
 	
 	public void tick() {
 		super.tick();
@@ -129,16 +122,16 @@ public class EntitySA_FTK extends EntitySA_LandBase{
 			seat.setWeapon(0, 0, model, tex, fx1, fx2, SASoundEvent.fire_kord.get(), 0,1,3,0,0.38F,
 			10, 6F, 1.25F, 1, false, 1, 0.01F, 20, 0);
 			
-			this.turretYaw1=seat.getYHeadRot();
-			if(seat.turretPitch<15)this.turretPitch1=seat.turretPitch;
-			while(this.turretYaw1 - this.turretYawO1 < -180.0F) {
+			this.turretYaw_1=seat.getYHeadRot();
+			if(seat.turretPitch<15)this.turretPitch_1=seat.turretPitch;
+			while(this.turretYaw_1 - this.turretYawO1 < -180.0F) {
 				this.turretYawO1 -= 360.0F;
 			}
-			while(this.turretPitch1 - this.turretPitchO1 >= 180.0F) {
+			while(this.turretPitch_1 - this.turretPitchO1 >= 180.0F) {
 				this.turretPitchO1 += 360.0F;
 			}
-			this.turretYawO1 = this.turretYaw1;
-			this.turretPitchO1 = this.turretPitch1;
+			this.turretYawO1 = this.turretYaw_1;
+			this.turretPitchO1 = this.turretPitch_1;
 			
 			if(seat.getRemain1()>0){
 				ammo = true;
@@ -166,8 +159,8 @@ public class EntitySA_FTK extends EntitySA_LandBase{
 		}else{
 			this.firesound2=SASoundEvent.fire_ruvg_3p.get();
 		}
-		if (this.getFirstSeat() != null && this.getFirstSeat().getControllingPassenger()!=null) {
-			if (this.getFirstSeat() != null){
+		if (this.getFirstSeat() != null && this.getFirstSeat().getControllingPassenger()!=null){
+			if (this.getFirstSeat() != null) {
 				EntitySA_Seat seat = (EntitySA_Seat)this.getFirstSeat();
 				if(seat.keyv){
 					if(cooltime3>150)cooltime3=0;
@@ -204,7 +197,7 @@ public class EntitySA_FTK extends EntitySA_LandBase{
 		String fx1 = "AdvTankFire";
 		String fx2 = null;//SAAPTrail
 		LivingEntity shooter = this;
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
 		AI_EntityWeapon.Attacktask(this, shooter, this.getTarget(), 3, model, tex, fx1, fx2, firesound1,
 		1F, this.fireposX1,this.fireposY1,this.fireposZ1,this.firebaseX,this.firebaseZ,
 		this.getX(), this.getY(), this.getZ(),this.turretYaw, this.turretPitch,
@@ -216,7 +209,7 @@ public class EntitySA_FTK extends EntitySA_LandBase{
 		String fx1 = "SmokeGun";
 		String fx2 = null;
 		LivingEntity shooter = this;
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
 		AI_EntityWeapon.Attacktask(this, shooter, this.getTarget(), 0, model, tex, fx1, fx2, firesound2,
 		1F, this.fireposX2,this.fireposY2,this.fireposZ2,this.firebaseX,this.firebaseZ,
 		this.getX(), this.getY(), this.getZ(),this.turretYaw, this.turretPitch,

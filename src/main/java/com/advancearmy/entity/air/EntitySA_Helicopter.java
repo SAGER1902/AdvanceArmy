@@ -1,32 +1,32 @@
 package advancearmy.entity.air;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
+
 import net.minecraftforge.fml.ModList;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.network.PlayMessages;
+import net.minecraft.world.World;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.EntityType;
+import net.minecraftforge.fml.network.FMLPlayMessages;
 import wmlib.common.living.WeaponVehicleBase;
 import advancearmy.entity.ai.AI_EntityWeapon;
 import advancearmy.AdvanceArmy;
 import advancearmy.event.SASoundEvent;
 import safx.SagerFX;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.ResourceLocation;
 import wmlib.client.obj.SAObjModel;
 import advancearmy.entity.EntitySA_HeliBase;
-import net.minecraft.util.Mth;
+import net.minecraft.util.math.MathHelper;
 import advancearmy.entity.EntitySA_Seat;
-import net.minecraft.world.entity.player.Player;
-import advancearmy.init.ModEntities;
+import net.minecraft.entity.player.PlayerEntity;
+
 public class EntitySA_Helicopter extends EntitySA_HeliBase{
-    /*protected int lerpSteps;
+    protected int lerpSteps;
     protected double lerpX;
     protected double lerpY;
     protected double lerpZ;
     protected double lerpYaw;
-    protected double lerpPitch;*/
-	public EntitySA_Helicopter(EntityType<? extends EntitySA_Helicopter> sodier, Level worldIn) {
+    protected double lerpPitch;
+	
+	public EntitySA_Helicopter(EntityType<? extends EntitySA_Helicopter> sodier, World worldIn) {
 		super(sodier, worldIn);
 		seatPosX[0] = 0;
 		seatPosY[0] = 0.8F;
@@ -50,11 +50,11 @@ public class EntitySA_Helicopter extends EntitySA_HeliBase{
 		this.renderHudOverlay = false;
 		this.renderHudOverlayZoom = false;
 		this.icon1tex = null;
-		this.icon2tex = ResourceLocation.tryParse("advancearmy:textures/hud/ah64icon.png");
+		this.icon2tex = new ResourceLocation("advancearmy:textures/hud/ah64icon.png");
 		this.seatView1X = 0F;
 		this.seatView1Y = 0F;
 		this.seatView1Z = 0.01F;
-		this.canNightV=true;
+		
 		seatView3X=0F;
 		seatView3Y=-4F;
 		seatView3Z=-10F;
@@ -73,7 +73,7 @@ public class EntitySA_Helicopter extends EntitySA_HeliBase{
 		this.reloadSound1 = SASoundEvent.reload_missile.get();
 		
 		this.magazine2 = 4;
-		this.reload_time2 = 150;
+		this.reload_time2 = 300;
 		this.reloadSound2 = SASoundEvent.reload_missile.get();
 		
 		this.magazine3 = 20;
@@ -84,7 +84,7 @@ public class EntitySA_Helicopter extends EntitySA_HeliBase{
 		
 		this.firesound1 = SASoundEvent.fire_missile.get();
 		this.firesound2 = SASoundEvent.fire_missile.get();
-		
+		this.canNightV=true;
 		this.ammo1=5;
 		this.ammo2=5;
 		this.fireposX1 = 2.13F;
@@ -97,11 +97,11 @@ public class EntitySA_Helicopter extends EntitySA_HeliBase{
 		this.firebaseZ = 0;
 		
 		this.obj = new SAObjModel("advancearmy:textures/mob/ah64.obj");
-		this.tex = ResourceLocation.tryParse("advancearmy:textures/mob/ah64.png");
+		this.tex = new ResourceLocation("advancearmy:textures/mob/ah64.png");
 		
 		this.mgobj = new SAObjModel("advancearmy:textures/mob/30mm.obj");
-		this.rotortex1 = ResourceLocation.tryParse("advancearmy:textures/mob/ah64rotor.png");
-		this.rotortex2 = ResourceLocation.tryParse("advancearmy:textures/mob/ah64rotor2.png");
+		this.rotortex1 = new ResourceLocation("advancearmy:textures/mob/ah64rotor.png");
+		this.rotortex2 = new ResourceLocation("advancearmy:textures/mob/ah64rotor2.png");
 		
 		this.setMg(0F, -0.07F, 1.23F, 0F);
 		this.rotorcount = 2;
@@ -121,19 +121,14 @@ public class EntitySA_Helicopter extends EntitySA_HeliBase{
 		this.w4name = "紧急维修";
 	}
 
-	public EntitySA_Helicopter(PlayMessages.SpawnEntity packet, Level worldIn) {
-		super(ModEntities.ENTITY_HELI.get(), worldIn);
+	public EntitySA_Helicopter(FMLPlayMessages.SpawnEntity packet, World worldIn) {
+		super(AdvanceArmy.ENTITY_HELI, worldIn);
 	}
-	public static AttributeSupplier.Builder createAttributes() {
-        return EntitySA_Helicopter.createMobAttributes().add(Attributes.KNOCKBACK_RESISTANCE, (double) 10.0D)
-					.add(Attributes.MAX_HEALTH, 300.0D)
-					.add(Attributes.FOLLOW_RANGE, 80.0D)
-					.add(Attributes.ARMOR, (double) 8D);
-    }
+
     /**
      * Smooths the rendering on servers
      */
-    /*private void tickLerp()
+    private void tickLerp()
     {
         if(this.isControlledByLocalInstance())
         {
@@ -146,12 +141,12 @@ public class EntitySA_Helicopter extends EntitySA_HeliBase{
             double d0 = this.getX() + (this.lerpX - this.getX()) / (double) this.lerpSteps;
             double d1 = this.getY() + (this.lerpY - this.getY()) / (double) this.lerpSteps;
             double d2 = this.getZ() + (this.lerpZ - this.getZ()) / (double) this.lerpSteps;
-            double d3 = Mth.wrapDegrees(this.lerpYaw - (double) this.yRot);
+            double d3 = MathHelper.wrapDegrees(this.lerpYaw - (double) this.yRot);
             this.yRot = (float) ((double) this.yRot + d3 / (double) this.lerpSteps);
             this.xRot = (float) ((double) this.xRot + (this.lerpPitch - (double) this.xRot) / (double) this.lerpSteps);
             --this.lerpSteps;
             this.setPos(d0, d1, d2);
-            this.setRot(this.getYRot(), this.getXRot());
+            this.setRot(this.yRot, this.xRot);
         }
     }
     @Override
@@ -163,11 +158,11 @@ public class EntitySA_Helicopter extends EntitySA_HeliBase{
         this.lerpYaw = (double) yaw;
         this.lerpPitch = (double) pitch;
         this.lerpSteps = 10;
-    }*/
+    }
 	
 	public void tick() {
 		super.tick();
-		//this.tickLerp();
+		this.tickLerp();
 
 		if(this.getHealth()>0){
 			if (this.getAnySeat(1) != null){//
@@ -179,7 +174,7 @@ public class EntitySA_Helicopter extends EntitySA_HeliBase{
 					String tex2 = "advancearmy:textures/entity/bullet/agm114.png";
 					String fx1 = "SmokeGun";
 					String fx2 = null;
-					seat.seatProtect = 0.2F;
+					seat.seatProtect = 0.9F;
 					seat.attack_range_max = 50;
 					seat.attack_height_max = 10;
 					seat.attack_height_min = -90;
@@ -190,14 +185,14 @@ public class EntitySA_Helicopter extends EntitySA_HeliBase{
 					seat.hud_box_obj = "wmlib:textures/hud/gunner.obj";
 					seat.hud_box_tex = "wmlib:textures/hud/box.png";
 					seat.seatHide = false;
-					seat.weaponCount = 2;
-					seat.canlock = true;
-					
+					seat.canNightV=true;
 					seat.gunner_aim=true;
 					seat.turretPitchMax = 0;
-					seat.minyaw=-100;
-					seat.maxyaw=100;
-					seat.canNightV=true;
+					seat.minyaw=-90;
+					seat.maxyaw=90;
+					
+					seat.weaponCount = 2;
+					seat.canlock = true;
 					seat.ammo1 = 5;
 					seat.magazine = 100;
 					seat.reload_time1 = 100;
@@ -214,8 +209,8 @@ public class EntitySA_Helicopter extends EntitySA_HeliBase{
 					seat.setWeapon(1, 4, model2, tex2, null, "SAMissileSmoke", SASoundEvent.fire_agm114.get(), this.fireposX2,this.fireposY2,this.fireposZ2,this.firebaseX,this.firebaseZ,
 					125, 3F, 1.05F, 4, false, 1, 0.01F, 200, 0);
 				}
-				this.turretYaw1=seat.getYHeadRot();
-				this.turretPitch1=seat.turretPitch;
+				this.turretYaw_1=seat.getYHeadRot();
+				this.turretPitch_1=seat.turretPitch;
 			}
 		}
 	}
@@ -231,11 +226,11 @@ public class EntitySA_Helicopter extends EntitySA_HeliBase{
 		String fx1 = "SmokeGun";
 		String fx2 = "SAMissileTrail";
 		LivingEntity shooter = this;
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
 		
 		AI_EntityWeapon.Attacktask(this, shooter, this.getTarget(), 3, model, tex, fx1, fx2, firesound1,
 		1F, fireX,this.fireposY1,this.fireposZ1,this.firebaseX,this.firebaseZ,
-		this.getX(), this.getY(), this.getZ(),this.getYRot(), this.turretPitch,
+		this.getX(), this.getY(), this.getZ(),this.yRot, this.turretPitch,
 		50, 3F, 1.1F, 2, false, 1, 0.001F, 50, 3);
 	}
 	public void weaponActive2(){
@@ -250,10 +245,10 @@ public class EntitySA_Helicopter extends EntitySA_HeliBase{
 
 		String fx2 = "SAMissileSmoke";
 		LivingEntity shooter = this;
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
 		Entity locktarget = null;
-		if(this.getFirstSeat() != null && this.getFirstSeat().mitarget!=null){
-			locktarget = this.getFirstSeat().mitarget;
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).mitarget!=null){
+			locktarget = ((EntitySA_Seat)this.getFirstSeat()).mitarget;
 		}else{
 			locktarget = this.getTarget();
 		}
@@ -261,7 +256,7 @@ public class EntitySA_Helicopter extends EntitySA_HeliBase{
 		
 		AI_EntityWeapon.Attacktask(this, shooter, locktarget, 4, model, tex, null, fx2, firesound2,
 		1F, fireX,this.fireposY2,this.fireposZ2,this.firebaseX,this.firebaseZ,
-		this.getX(), this.getY(), this.getZ(),this.getYRot(), this.turretPitch,
-		60, 3F, 1.5F, 2, false, 1, 0.01F, 250, 0);
+		this.getX(), this.getY(), this.getZ(),this.yRot, this.turretPitch,
+		35, 3F, 1.5F, 2, false, 1, 0.01F, 250, 0);
 	}
 }

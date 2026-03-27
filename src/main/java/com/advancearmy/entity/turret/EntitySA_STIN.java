@@ -1,28 +1,27 @@
 package advancearmy.entity.turret;
 import net.minecraftforge.fml.ModList;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import advancearmy.init.ModEntities;
-import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.network.PlayMessages;
+import net.minecraft.world.World;
+import net.minecraft.entity.ai.attributes.AttributeModifierMap;
+import net.minecraft.entity.ai.attributes.Attributes;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityType;
+import net.minecraftforge.fml.network.FMLPlayMessages;
 import wmlib.common.living.WeaponVehicleBase;
 import advancearmy.entity.ai.AI_EntityWeapon;
 import advancearmy.AdvanceArmy;
 import advancearmy.event.SASoundEvent;
 import safx.SagerFX;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.ResourceLocation;
 import wmlib.client.obj.SAObjModel;
 import advancearmy.entity.EntitySA_TurretBase;
-import net.minecraft.util.Mth;
+import net.minecraft.util.math.MathHelper;
 import advancearmy.entity.EntitySA_SoldierBase;
 import advancearmy.entity.EntitySA_Seat;
 
 public class EntitySA_STIN extends EntitySA_TurretBase{
-	public EntitySA_STIN(EntityType<? extends EntitySA_STIN> sodier, Level worldIn) {
+	public EntitySA_STIN(EntityType<? extends EntitySA_STIN> sodier, World worldIn) {
 		super(sodier, worldIn);
 		seatPosX[0] = 0.63F;
 		seatPosY[0] = 1.1F;
@@ -44,7 +43,7 @@ public class EntitySA_STIN extends EntitySA_TurretBase{
 		this.w1name = "防空导弹";
 		this.seatView1X = 0F;
 		this.seatView1Y = 0F;
-		this.seatView1Z = 0.01F;
+		this.seatView1Y = 0.01F;
 		seatTurret[0] = true;
 		this.w1recoilp = 1;
 		this.w1recoilr = 3;
@@ -61,24 +60,24 @@ public class EntitySA_STIN extends EntitySA_TurretBase{
 		this.fireposX1 = 0;
 		this.fireposY1 = 2.26F;
 		this.fireposZ1 = 0.84F;
-		this.firebaseY = 0;
+		this.firebaseX = 0;
 		this.firebaseZ = 0F;
 		this.w1barrelsize = 0.2F;
 		this.obj = new SAObjModel("advancearmy:textures/mob/stin.obj");
-		this.tex = ResourceLocation.tryParse("advancearmy:textures/mob/stin.png");
-		this.guntex = ResourceLocation.tryParse("advancearmy:textures/gun/fim92.png");
+		this.tex = new ResourceLocation("advancearmy:textures/mob/stin.png");
+		this.guntex = new ResourceLocation("advancearmy:textures/gun/fim92.png");
 		this.magazine = 2;
 		this.reload_time1 = 95;
 		this.reloadSound1 = SASoundEvent.reload_missile.get();
 		this.firesound1 = SASoundEvent.fire_stin.get();
-		this.icon1tex = ResourceLocation.tryParse("advancearmy:textures/hud/towhead.png");
-		this.icon2tex = ResourceLocation.tryParse("advancearmy:textures/hud/towbody.png");
+		this.icon1tex = new ResourceLocation("advancearmy:textures/hud/towhead.png");
+		this.icon2tex = new ResourceLocation("advancearmy:textures/hud/towbody.png");
 		this.weaponCount = 1;
 		this.w1icon="advancearmy:textures/hud/aim9x.png";
 	}
 
-	public EntitySA_STIN(PlayMessages.SpawnEntity packet, Level worldIn) {//
-		super(ModEntities.ENTITY_STIN.get(), worldIn);
+	public EntitySA_STIN(FMLPlayMessages.SpawnEntity packet, World worldIn) {//
+		super(AdvanceArmy.ENTITY_STIN, worldIn);
 	}
 	
 	public void weaponActive1(){
@@ -87,14 +86,14 @@ public class EntitySA_STIN extends EntitySA_TurretBase{
 		String fx1 = "SmokeGun";
 		LivingEntity shooter = this;
 		Entity locktarget = null;
-		if(this.getFirstSeat() != null && this.getFirstSeat().mitarget!=null){
-			locktarget = this.getFirstSeat().mitarget;
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).mitarget!=null){
+			locktarget = ((EntitySA_Seat)this.getFirstSeat()).mitarget;
 		}else{
 			locktarget = this.getTarget();
 		}
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
 		AI_EntityWeapon.Attacktask(this, shooter, locktarget, 4, model, tex, fx1, "SAMissileTrail", firesound1,
-		1F, this.fireposX1,this.fireposY1,this.fireposZ1,this.firebaseY,this.firebaseZ,
+		1F, this.fireposX1,this.fireposY1,this.fireposZ1,this.firebaseX,this.firebaseZ,
 		this.getX(), this.getY(), this.getZ(),this.turretYaw, this.turretPitch,
 		50, 4, 1F, 2, false, 1, 0.01F, 100, 0);
 	}

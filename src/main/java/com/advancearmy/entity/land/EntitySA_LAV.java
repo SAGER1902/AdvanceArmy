@@ -9,53 +9,53 @@ import wmlib.common.bullet.EntityBullet;
 import wmlib.common.bullet.EntityShell;
 import wmlib.common.bullet.EntityMissile;
 import advancearmy.event.SASoundEvent;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.resources.ResourceLocation;
-
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.core.BlockPos;
-import net.minecraft.util.Mth;
-import net.minecraft.world.phys.Vec3;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.World;
+import net.minecraft.util.DamageSource;
+import net.minecraft.util.Hand;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.util.SoundEvent;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.SoundEvents;
+import net.minecraft.item.Items;
+import net.minecraft.item.Item;
+import net.minecraft.block.Blocks;
 import safx.SagerFX;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import advancearmy.init.ModEntities;
-import net.minecraft.world.entity.ai.attributes.Attributes;
-
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.world.entity.Entity;
-
-import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.MoverType;
-import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.network.PlayMessages;
-
+import net.minecraft.item.ItemStack;
+import net.minecraft.entity.ai.attributes.AttributeModifierMap;
+import net.minecraft.entity.ai.attributes.Attributes;
+import net.minecraft.entity.IRangedAttackMob;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.monster.IMob;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.AgeableEntity;
+import net.minecraft.entity.CreatureEntity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.MobEntity;
+import net.minecraft.entity.MoverType;
+import net.minecraft.entity.EntityType;
+import net.minecraftforge.fml.network.FMLPlayMessages;
+import net.minecraftforge.fml.network.NetworkHooks;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
-
+import net.minecraft.util.ActionResultType;
 import safx.util.EntityCondition;
-import wmlib.common.living.PL_LandMove;
 import wmlib.common.living.WeaponVehicleBase;
 
-import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.world.level.Explosion;
-import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.particles.ParticleTypes;
+import net.minecraft.world.Explosion;
+import net.minecraft.world.gen.Heightmap;
 import net.minecraftforge.fml.ModList;
 import advancearmy.entity.EntitySA_Seat;
+import net.minecraft.nbt.CompoundNBT;
 import advancearmy.entity.EntitySA_LandBase;
 import wmlib.common.living.EntityWMSeat;
-import wmlib.common.living.ai.VehicleLockGoal;
 import wmlib.client.obj.SAObjModel;
 public class EntitySA_LAV extends EntitySA_LandBase{
-	public EntitySA_LAV(EntityType<? extends EntitySA_LAV> sodier, Level worldIn) {
+	
+	public EntitySA_LAV(EntityType<? extends EntitySA_LAV> sodier, World worldIn) {
 		super(sodier, worldIn);
 		seatPosX[0] = 0.5F;
 		seatPosY[0] = 1.7F;
@@ -81,10 +81,20 @@ public class EntitySA_LAV extends EntitySA_LandBase{
 		this.seatView1X = 0F;
 		this.seatView1Y = 0F;
 		this.seatView1Z = 0.01F;
-		canWater=true;
-		this.icon1tex = ResourceLocation.tryParse("advancearmy:textures/hud/lavhead.png");
-		this.icon2tex = ResourceLocation.tryParse("advancearmy:textures/hud/lavbody.png");
+		this.armor_front = 30;
+		this.armor_side = 10;
+		this.armor_back = 10;
+		this.armor_top = 10;
+		this.armor_bottom = 10;
+		this.haveTurretArmor = true;
+		this.armor_turret_height = 2;
+		this.armor_turret_front = 30;
+		this.armor_turret_side = 10;
+		this.armor_turret_back = 10;
+		this.icon1tex = new ResourceLocation("advancearmy:textures/hud/lavhead.png");
+		this.icon2tex = new ResourceLocation("advancearmy:textures/hud/lavbody.png");
 		this.obj = new SAObjModel("advancearmy:textures/mob/lav25.obj");
+		
 		seatView3X=0F;
 		seatView3Y=-2F;
 		seatView3Z=-4.5F;
@@ -98,18 +108,7 @@ public class EntitySA_LAV extends EntitySA_LandBase{
 		this.throttleMin = -2F;
 		this.thFrontSpeed = 0.3F;
 		this.thBackSpeed = -0.3F;
-		this.setMaxUpStep(1.5F);
-		
-		this.armor_front = 30;
-		this.armor_side = 10;
-		this.armor_back = 10;
-		this.armor_top = 10;
-		this.armor_bottom = 10;
-		this.haveTurretArmor = true;
-		this.armor_turret_height = 2;
-		this.armor_turret_front = 30;
-		this.armor_turret_side = 10;
-		this.armor_turret_back = 10;
+		this.maxUpStep = 1.5F;
 		
 		this.ammo1=5;
 		this.ammo2=4;
@@ -128,7 +127,7 @@ public class EntitySA_LAV extends EntitySA_LandBase{
 		this.reload_time1 = 95;
 		this.reloadSound1 = SASoundEvent.reload_chaingun.get();
 		this.firesound1 = SASoundEvent.fire_lav.get();
-		
+		canWater=true;
 		this.magazine2 = 2;
 		this.reload_time2 = 295;
 		this.reloadSound2 = SASoundEvent.reload_m6.get();
@@ -145,19 +144,14 @@ public class EntitySA_LAV extends EntitySA_LandBase{
 		this.w4icon="wmlib:textures/hud/repair.png";
 	}
 
-	public EntitySA_LAV(PlayMessages.SpawnEntity packet, Level worldIn) {//
-		super(ModEntities.ENTITY_LAV.get(), worldIn);
+	public EntitySA_LAV(FMLPlayMessages.SpawnEntity packet, World worldIn) {//
+		super(AdvanceArmy.ENTITY_LAV, worldIn);
 	}
-	public static AttributeSupplier.Builder createAttributes() {
-        return EntitySA_LAV.createMobAttributes().add(Attributes.KNOCKBACK_RESISTANCE, (double) 10.0D)
-					.add(Attributes.MAX_HEALTH, 300.0D)
-					.add(Attributes.FOLLOW_RANGE, 100.0D)
-					.add(Attributes.ARMOR, (double) 8D);
-    }
+	
 	public void tick() {
 		super.tick();
-		if (this.getFirstSeat() != null && this.getFirstSeat().getControllingPassenger()!=null) {
-			{
+		if (this.getFirstSeat() != null && this.getFirstSeat().getControllingPassenger()!=null){
+			if (this.getFirstSeat() != null) {
 				EntitySA_Seat seat = (EntitySA_Seat)this.getFirstSeat();
 				//PL_LandMove.moveCarMode(player, this, this.MoveSpeed, turnSpeed);
 				if(seat.keyv){
@@ -195,32 +189,32 @@ public class EntitySA_LAV extends EntitySA_LandBase{
 		double zz11 = 0;
 		double px = 0;
 		double pz = 0;
-		px -= Mth.sin(this.getYRot() * 0.01745329252F) * this.posZmove;
-		pz += Mth.cos(this.getYRot() * 0.01745329252F) * this.posZmove;
-		px -= Mth.sin(this.getYRot() * 0.01745329252F -1.57F) * this.posXmove;
-		pz += Mth.cos(this.getYRot() * 0.01745329252F -1.57F) * this.posXmove;
+		px -= MathHelper.sin(this.yRot * 0.01745329252F) * this.posZmove;
+		pz += MathHelper.cos(this.yRot * 0.01745329252F) * this.posZmove;
+		px -= MathHelper.sin(this.yRot * 0.01745329252F -1.57F) * this.posXmove;
+		pz += MathHelper.cos(this.yRot * 0.01745329252F -1.57F) * this.posXmove;
 		
 		float base = 0;
-		base = Mth.sqrt((fireposZ1 - 0)* (fireposZ1 - 0) + (0.09F - fireposX1)*(0.09F - fireposX1)) * Mth.sin(-this.turretPitch  * (1 * (float) Math.PI / 180));
-		xx11 -= Mth.sin(this.turretYaw * 0.01745329252F) * fireposZ1;
-		zz11 += Mth.cos(this.turretYaw * 0.01745329252F) * fireposZ1;
-		xx11 -= Mth.sin(this.turretYaw * 0.01745329252F + 1.57F) * 0.09F;
-		zz11 += Mth.cos(this.turretYaw * 0.01745329252F + 1.57F) * 0.09F;
+		base = MathHelper.sqrt((this.fireposZ1 - 0)* (this.fireposZ1 - 0) + (this.fireposX1 - 0.24F)*(this.fireposX1 - 0.24F)) * MathHelper.sin(-this.turretPitch  * (1 * (float) Math.PI / 180));
+		xx11 -= MathHelper.sin(this.turretYaw * 0.01745329252F) * this.fireposZ1;
+		zz11 += MathHelper.cos(this.turretYaw * 0.01745329252F) * this.fireposZ1;
+		xx11 -= MathHelper.sin(this.turretYaw * 0.01745329252F + 1.57F) * this.fireposX1;
+		zz11 += MathHelper.cos(this.turretYaw * 0.01745329252F + 1.57F) * this.fireposX1;
 		LivingEntity shooter = this;
 		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
-		EntityShell bullet = new EntityShell(this.level(), shooter);
+		EntityShell bullet = new EntityShell(this.level, shooter);
 		bullet.hitEntitySound=SASoundEvent.ag_metal.get();
 		bullet.hitBlockSound=SASoundEvent.ag_impact.get();
-		bullet.power = 18;
+		bullet.power = 10;
 		bullet.timemax = 100;
 		bullet.setBulletType(1);
 		bullet.setExLevel(1);
 		bullet.setModel("advancearmy:textures/entity/bullet/bullet30mm.obj");
 		bullet.setTex("advancearmy:textures/entity/bullet/bullet1.png");
 		bullet.setGravity(0.01F);
-		bullet.moveTo(this.getX()+px + xx11, this.getY()+fireposY1+base, this.getZ()+pz + zz11, this.getYRot(), this.turretPitch);
+		bullet.moveTo(this.getX()+px + xx11, this.getY()+fireposY1+base, this.getZ()+pz + zz11, this.yRot, this.turretPitch);
 		bullet.shootFromRotation(this, this.turretPitch, this.turretYaw, 0.0F, 4F, 1);
-		if (!this.level().isClientSide) this.level().addFreshEntity(bullet);
+		if (!this.level.isClientSide) this.level.addFreshEntity(bullet);
 	}
 	public void weaponActive2(){
 		this.playSound(firesound2, 3.0F, 1.0F);
@@ -232,38 +226,36 @@ public class EntitySA_LAV extends EntitySA_LandBase{
 		double zz11 = 0;
 		double px = 0;
 		double pz = 0;
-		px -= Mth.sin(this.getYRot() * 0.01745329252F) * this.posZmove;
-		pz += Mth.cos(this.getYRot() * 0.01745329252F) * this.posZmove;
-		px -= Mth.sin(this.getYRot() * 0.01745329252F -1.57F) * this.posXmove;
-		pz += Mth.cos(this.getYRot() * 0.01745329252F -1.57F) * this.posXmove;
+		px -= MathHelper.sin(this.yRot * 0.01745329252F) * this.posZmove;
+		pz += MathHelper.cos(this.yRot * 0.01745329252F) * this.posZmove;
+		px -= MathHelper.sin(this.yRot * 0.01745329252F -1.57F) * this.posXmove;
+		pz += MathHelper.cos(this.yRot * 0.01745329252F -1.57F) * this.posXmove;
 		
 		float base = 0;
-		base = Mth.sqrt((0.88F - 0)* (0.88F - 0) + (fire_x - 0)*(fire_x - 0)) * Mth.sin(-this.turretPitch  * (1 * (float) Math.PI / 180));
-		xx11 -= Mth.sin(this.turretYaw * 0.01745329252F) * 0.88F;
-		zz11 += Mth.cos(this.turretYaw * 0.01745329252F) * 0.88F;
-		xx11 -= Mth.sin(this.turretYaw * 0.01745329252F + 1.57F) * fire_x;
-		zz11 += Mth.cos(this.turretYaw * 0.01745329252F + 1.57F) * fire_x;
+		base = MathHelper.sqrt((0.88F - 0)* (0.88F - 0) + (fire_x - 0)*(fire_x - 0)) * MathHelper.sin(-this.turretPitch  * (1 * (float) Math.PI / 180));
+		xx11 -= MathHelper.sin(this.turretYaw * 0.01745329252F) * 0.88F;
+		zz11 += MathHelper.cos(this.turretYaw * 0.01745329252F) * 0.88F;
+		xx11 -= MathHelper.sin(this.turretYaw * 0.01745329252F + 1.57F) * fire_x;
+		zz11 += MathHelper.cos(this.turretYaw * 0.01745329252F + 1.57F) * fire_x;
 		LivingEntity shooter = this;
 		Entity locktarget = null;
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
+		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
 		if(this.getFirstSeat() != null && this.getFirstSeat().mitarget!=null){
 			locktarget = this.getFirstSeat().mitarget;
 		}else{
 			locktarget = this.getTarget();
 		}
-		EntityMissile bullet = new EntityMissile(this.level(), shooter, locktarget, shooter);
+		EntityMissile bullet = new EntityMissile(this.level, shooter, locktarget, shooter);
 		bullet.power = 250;
 		bullet.setGravity(0.01F);
 		bullet.setExLevel(5);
-		bullet.hitEntitySound=SASoundEvent.tank_shell_metal.get();
-		bullet.hitBlockSound=SASoundEvent.tank_shell.get();
 		//bullet.flame = true;
-		bullet.setBulletType(1);
+		bullet.setBulletType(2);
 		bullet.setModel("advancearmy:textures/entity/bullet/bulletrocket.obj");
 		bullet.setTex("advancearmy:textures/entity/bullet/bulletrocket.png");
-		bullet.moveTo(this.getX()+px + xx11, this.getY()+2.9F+base, this.getZ()+pz + zz11, this.getYRot(), this.turretPitch);
+		bullet.moveTo(this.getX()+px + xx11, this.getY()+3.1F+base, this.getZ()+pz + zz11, this.yRot, this.turretPitch);
 		bullet.shootFromRotation(this, this.turretPitch, this.turretYaw, 0.0F, 4F, 1);
-		if (!this.level().isClientSide) this.level().addFreshEntity(bullet);
+		if (!this.level.isClientSide) this.level.addFreshEntity(bullet);
 		bullet.friend = this;
 		bullet.setFX("SAMissileSmoke");
 	}

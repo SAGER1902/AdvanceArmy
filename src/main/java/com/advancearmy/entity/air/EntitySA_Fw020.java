@@ -1,27 +1,26 @@
 package advancearmy.entity.air;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
+
 import net.minecraftforge.fml.ModList;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.network.PlayMessages;
+import net.minecraft.world.World;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.EntityType;
+import net.minecraftforge.fml.network.FMLPlayMessages;
 import wmlib.common.living.WeaponVehicleBase;
 import advancearmy.entity.ai.AI_EntityWeapon;
 import advancearmy.AdvanceArmy;
 import advancearmy.event.SASoundEvent;
-import advancearmy.init.ModEntities;
-import net.minecraft.resources.ResourceLocation;
+
+import net.minecraft.util.ResourceLocation;
 import wmlib.client.obj.SAObjModel;
 import advancearmy.entity.EntitySA_AirBase;
-import net.minecraft.util.Mth;
+import net.minecraft.util.math.MathHelper;
 import advancearmy.entity.EntitySA_Seat;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.entity.player.PlayerEntity;
 import safx.util.EntityCondition;
 import safx.SagerFX;
 public class EntitySA_Fw020 extends EntitySA_AirBase{
-	public EntitySA_Fw020(EntityType<? extends EntitySA_Fw020> sodier, Level worldIn) {
+	public EntitySA_Fw020(EntityType<? extends EntitySA_Fw020> sodier, World worldIn) {
 		super(sodier, worldIn);
 		seatPosX[0] = 0;
 		seatPosY[0] = 2F;
@@ -57,7 +56,7 @@ public class EntitySA_Fw020 extends EntitySA_AirBase{
 		this.stayrange = 50;
 		this.min_height = 25;
 		this.icon1tex = null;
-		this.icon2tex = ResourceLocation.tryParse("advancearmy:textures/hud/fw020icon.png");
+		this.icon2tex = new ResourceLocation("advancearmy:textures/hud/fw020icon.png");
 		seatView3X=0F;
 		seatView3Y=-4F;
 		seatView3Z=-12F;
@@ -65,7 +64,7 @@ public class EntitySA_Fw020 extends EntitySA_AirBase{
 		
         this.MoveSpeed = 0.07F;
         this.turnSpeed = 4F;
-		this.setMaxUpStep(1.5F);
+		this.maxUpStep = 1.5F;
 		this.flyPitchMax = 90F;
 		this.flyPitchMin = -90F;
         this.throttleMax = 20F;
@@ -73,19 +72,19 @@ public class EntitySA_Fw020 extends EntitySA_AirBase{
 		this.thFrontSpeed = 0.2F;
 		this.thBackSpeed = -0.15F;
 		this.obj = new SAObjModel("advancearmy:textures/mob/fw020.obj");
-		this.tex = ResourceLocation.tryParse("advancearmy:textures/mob/fw020_t.png");
-		this.drivetex = ResourceLocation.tryParse("advancearmy:textures/mob/drive.png");
+		this.tex = new ResourceLocation("advancearmy:textures/mob/fw020_t.png");
+		this.drivetex = new ResourceLocation("advancearmy:textures/mob/drive.png");
 		this.reloadSound1 = SASoundEvent.reload_missile.get();
 		this.reloadSound2 = SASoundEvent.reload_chaingun.get();
 		this.reloadSound4 = SASoundEvent.bomb_reload.get();
 		this.magazine = 600;
 		this.reload_time1 = 100;
-		this.trailtex = ResourceLocation.tryParse("advancearmy:textures/entity/flash/thruster_b.png");
+		
 		this.magazine2 = 6;
 		this.reload_time2 = 100;
 		this.magazine4 = 2;
 		this.reload_time4 = 250;
-		this.ammo1=2;
+		this.ammo1=4;
 		this.magazine3 = 20;
 		this.reload_time3 = 300;
 		this.weaponCount = 4;
@@ -114,22 +113,19 @@ public class EntitySA_Fw020 extends EntitySA_AirBase{
 		this.firesound4 = SASoundEvent.bomb_release.get();
 	}
 
-	public EntitySA_Fw020(PlayMessages.SpawnEntity packet, Level worldIn) {
-		super(ModEntities.ENTITY_FW020.get(), worldIn);
+	public EntitySA_Fw020(FMLPlayMessages.SpawnEntity packet, World worldIn) {
+		super(AdvanceArmy.ENTITY_F35, worldIn);
 	}
-	public static AttributeSupplier.Builder createAttributes() {
-        return EntitySA_Fw020.createMobAttributes().add(Attributes.KNOCKBACK_RESISTANCE, (double) 10.0D)
-					.add(Attributes.MAX_HEALTH, 500.0D).add(Attributes.FOLLOW_RANGE, 200.0D).add(Attributes.ARMOR, (double) 8D);
-    }
+	
 	boolean trail = false;
 	public void tick() {
 		super.tick();
 		if(this.getHealth()>0){
-			if(!this.onGround() && this.getMovePitch()<-1F && this.movePower>10){
+			if(!this.isOnGround() && (this.getMovePitch()>0.1F||this.getMovePitch()<-0.1F||this.getMoveYaw()>0.1F||this.getMoveYaw()<-0.1F)){
 				if(!trail){
 					if(ModList.get().isLoaded("safx")){
-						if(this.level().isClientSide)SagerFX.proxy.createFXOnEntityWithOffset("PlaneTrail", this, 6.44f, -0.5f, -6.71f, true, EntityCondition.ENTITY_PLANE);
-						if(this.level().isClientSide)SagerFX.proxy.createFXOnEntityWithOffset("PlaneTrail", this, -6.44f, -0.5f, -6.71f, true, EntityCondition.ENTITY_PLANE);
+						if(this.level.isClientSide)SagerFX.proxy.createFXOnEntityWithOffset("PlaneTrail", this, 6.44f, -0.5f, -6.71f, true, EntityCondition.ENTITY_PLANE);
+						if(this.level.isClientSide)SagerFX.proxy.createFXOnEntityWithOffset("PlaneTrail", this, -6.44f, -0.5f, -6.71f, true, EntityCondition.ENTITY_PLANE);
 					}
 					trail = true;
 				}
@@ -148,7 +144,7 @@ public class EntitySA_Fw020 extends EntitySA_AirBase{
 		String model = "advancearmy:textures/entity/bullet/bulletcannon_small.obj";
 		String tex = "advancearmy:textures/entity/bullet/bullet12.7.png";
 		LivingEntity shooter = this;
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
 		AI_EntityWeapon.Attacktask(this, shooter, null, 3, model, tex, null, null, firesound1,
 		1.57F, 2.63F,this.fireposY2,this.fireposZ2,this.firebaseX,this.firebaseZ,
 		this.getX(), this.getY(), this.getZ(),this.turretYaw, this.turretPitch,
@@ -163,21 +159,21 @@ public class EntitySA_Fw020 extends EntitySA_AirBase{
 		String model = "wmlib:textures/entity/flare.obj";
 		String tex = "wmlib:textures/entity/flare.png";
 		LivingEntity shooter = this;
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
 		Entity locktarget = null;
-		if(this.getFirstSeat() != null && this.getFirstSeat().mitarget!=null){
-			locktarget = this.getFirstSeat().mitarget;
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).mitarget!=null){
+			locktarget = ((EntitySA_Seat)this.getFirstSeat()).mitarget;
 		}else{
 			locktarget = this.getTarget();
 		}
 		AI_EntityWeapon.Attacktask(this, shooter, locktarget, 3, model, tex, null, null, firesound2,
 		1.57F, -2.83F, 0, 0, 1.53F,-2.89F,
-		this.getX(), this.getY(), this.getZ(),this.getYRot(), this.turretPitch,
+		this.getX(), this.getY(), this.getZ(),this.yRot, this.turretPitch,
 		75, 5F, 1.1F, 3, false, 1, 0.001F, 200, 5);
 		
 		AI_EntityWeapon.Attacktask(this, shooter, locktarget, 3, model, tex, null, null, firesound2,
 		1.57F, 2.83F, 0, 0, 1.53F,-2.89F,
-		this.getX(), this.getY(), this.getZ(),this.getYRot()/*this.turretYaw*/, this.turretPitch,
+		this.getX(), this.getY(), this.getZ(),this.yRot, this.turretPitch,
 		75, 5F, 1.1F, 3, false, 1, 0.001F, 200, 5);
 	}
 }

@@ -6,120 +6,123 @@ import advancearmy.AdvanceArmy;
 import wmlib.common.bullet.EntityBullet;
 import wmlib.common.bullet.EntityShell;
 import advancearmy.event.SASoundEvent;
-import advancearmy.init.ModEntities;
+
 import net.minecraft.world.Difficulty;
-import net.minecraft.world.level.Level;
-import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.World;
+import net.minecraft.world.server.ServerWorld;
 
-import net.minecraft.world.InteractionHand;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Hand;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.SoundCategory;
 
-import net.minecraft.network.chat.Component;
+import net.minecraft.util.text.TranslationTextComponent;
 
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.core.BlockPos;
-import net.minecraft.util.Mth;
-import net.minecraft.world.phys.Vec3;
-import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.DamageSource;
+import net.minecraft.util.SoundEvent;
+import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.SoundEvents;
 
-import net.minecraft.world.item.Items;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.level.block.Blocks;
+import net.minecraft.item.Items;
+import net.minecraft.item.Item;
+import net.minecraft.block.Blocks;
 
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.scores.Team;
+import net.minecraft.item.ItemStack;
+import net.minecraft.scoreboard.Team;
+import net.minecraft.block.material.Material;
 
+import net.minecraft.network.IPacket;
 
-import net.minecraft.network.protocol.Packet;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.NBTUtil;
 
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtUtils;
+import net.minecraft.entity.ai.attributes.AttributeModifierMap;
+import net.minecraft.entity.ai.attributes.Attributes;
 
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.entity.IRangedAttackMob;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.monster.IMob;
+import net.minecraft.entity.Entity;
 
+import net.minecraft.entity.CreatureEntity;
+import net.minecraft.entity.LivingEntity;
 
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.world.entity.Entity;
+import net.minecraft.entity.MobEntity;
+import net.minecraft.entity.MoverType;
+import net.minecraft.entity.EntitySize;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.Pose;
 
-import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.LivingEntity;
-
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.MoverType;
-import net.minecraft.world.entity.EntityDimensions;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.Pose;
-
-import net.minecraftforge.network.PlayMessages;
-import net.minecraftforge.network.NetworkHooks;
+import net.minecraftforge.fml.network.FMLPlayMessages;
+import net.minecraftforge.fml.network.NetworkHooks;
 
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
-import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
-import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
+import net.minecraft.entity.ai.goal.LookAtGoal;
+import net.minecraft.entity.ai.goal.LookRandomlyGoal;
+import net.minecraft.entity.ai.goal.NearestAttackableTargetGoal;
+import net.minecraft.entity.ai.goal.RangedAttackGoal;
+import net.minecraft.entity.ai.goal.WaterAvoidingRandomWalkingGoal;
+import net.minecraft.entity.ai.goal.HurtByTargetGoal;
 
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.InteractionResult;
+import com.mrcrayfish.guns.common.Gun;
+import com.mrcrayfish.guns.item.GunItem;
+import com.mrcrayfish.guns.item.IAmmo;
+import com.mrcrayfish.guns.init.ModSounds;
 
-import net.minecraft.network.chat.Component;
+import net.minecraft.inventory.EquipmentSlotType;
+import net.minecraft.util.ActionResultType;
 
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.ai.targeting.TargetingConditions;
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.Style;
+import net.minecraft.util.text.TranslationTextComponent;
+
+import net.minecraft.entity.item.ItemEntity;
+import net.minecraft.entity.EntityPredicate;
 import java.util.function.Predicate;
 
 import advancearmy.entity.EntitySA_Seat;
+import advancearmy.entity.ai.SoldierAttackableTargetGoalSA;
 import wmlib.common.living.WeaponVehicleBase;
 import advancearmy.entity.ai.AI_EntityWeapon;
 import wmlib.common.living.EntityWMSeat;
 import wmlib.common.living.EntityWMVehicleBase;
-import wmlib.common.living.ai.LivingLockGoal;
-import wmlib.common.living.ai.LivingSearchTargetGoalSA;
-import advancearmy.entity.ai.WaterAvoidingRandomWalkingGoalSA;
+
 import wmlib.api.IEnemy;
 import wmlib.common.living.EntityWMVehicleBase;
 import safx.SagerFX;
 import net.minecraftforge.fml.ModList;
 public class EntityAohuan extends EntityMobSquadBase{
-	public EntityAohuan(EntityType<? extends EntityAohuan> sodier, Level worldIn) {
+	public EntityAohuan(EntityType<? extends EntityAohuan> sodier, World worldIn) {
 		super(sodier, worldIn);
 		this.xpReward = 8;
 		canDrop = true;
 	}
-	public EntityAohuan(PlayMessages.SpawnEntity packet, Level worldIn) {
-		super(ModEntities.ENTITY_AOHUAN.get(), worldIn);
+	public EntityAohuan(FMLPlayMessages.SpawnEntity packet, World worldIn) {
+		super(AdvanceArmy.ENTITY_AOHUAN, worldIn);
 	}
-	public static AttributeSupplier.Builder createAttributes() {
-        return EntityAohuan.createMobAttributes().add(Attributes.MAX_HEALTH, 80.0D)
-					.add(Attributes.KNOCKBACK_RESISTANCE, (double) 5.0F)
-					.add(Attributes.MOVEMENT_SPEED, (double)0.2F)
-					.add(Attributes.FOLLOW_RANGE, 35.0D)
-					.add(Attributes.ARMOR, (double) 12D);
-    }
-	public boolean causeFallDamage(float p_225503_1_, float p_225503_2_, DamageSource damageSource) {
+	public boolean causeFallDamage(float p_225503_1_, float p_225503_2_) {
 		if(ModList.get().isLoaded("safx") && this.fallDistance>10)SagerFX.proxy.createFX("DropRing", null, this.getX(), this.getY(), this.getZ(), 0F, 0F, 0F, 1F);
 	  return false;
 	}
 
-	public EntityDimensions dimensions_s;
+	public EntitySize dimensions_s;
 	public void setSize(float w,float h){
-		dimensions_s = EntityDimensions.scalable(w,h);
+		dimensions_s = EntitySize.scalable(w,h);
 		double d0 = (double)dimensions_s.width / 2.0D;
-        this.setBoundingBox(new AABB(this.getX() - d0, this.getY(), this.getZ() - d0, this.getX() + d0, this.getY() + (double)dimensions_s.height, this.getZ() + d0));
+        this.setBoundingBox(new AxisAlignedBB(this.getX() - d0, this.getY(), this.getZ() - d0, this.getX() + d0, this.getY() + (double)dimensions_s.height, this.getZ() + d0));
 	}
 
 	public void tick() {
 		super.tick();
 		if(this.getHealth()>0){
-		float moveSpeed = 0.40F;
+		float sp = 0.40F;
 		this.weaponidmax = 5;
 		if(cheack){
-			if(this.getWeaponId()==0)this.setWeaponId(1+this.level().random.nextInt(this.weaponidmax));
+			if(this.getWeaponId()==0)this.setWeaponId(1+this.level.random.nextInt(this.weaponidmax));
 			cheack = false;
 		}
 		if(this.getWeaponId()==1||this.getWeaponId()==5){//huoshe
@@ -179,13 +182,13 @@ public class EntityAohuan extends EntityMobSquadBase{
 			7, 6F, 1.5F, 0, false, 1, 0.01F, 20, 0);
 		}
 		this.attack_height_max = this.attack_range_max;
-		if(this.needaim)moveSpeed = 0.3F;
+		if(this.needaim)sp = 0.3F;
 		if(this.getRemain2()==1){
-			moveSpeed = 0.1F;
+			sp = 0.1F;
 			if(this.getBbHeight()!=0.5F)this.setSize(0.5F, 0.5F);
 			this.height = 0.5F;//开枪高度
 		}else if(this.sit_aim){
-			moveSpeed = 0.05F;
+			sp = 0.05F;
 			if(this.getBbHeight()!=0.8F)this.setSize(0.5F, 0.8F);
 			this.height = 1.2F;//开枪高度
 		}else{
@@ -195,7 +198,7 @@ public class EntityAohuan extends EntityMobSquadBase{
 				if(this.getBbHeight()!=1.8F)this.setSize(0.5F, 1.8F);
 			}
 			this.height = 1.8F;//开枪高度
-			moveSpeed = 0.2F;
+			sp = 0.2F;
 		}
 		if(this.getRemain2()==3)this.groundtime = 0;
 		if(this.groundtime<200)++this.groundtime;
@@ -203,19 +206,19 @@ public class EntityAohuan extends EntityMobSquadBase{
 		if(this.ground_time<60)++ground_time;
 		if(this.ground_time<50){
 			this.setRemain2(1);
-			moveSpeed = 0.02F;
+			sp = 0.02F;
 		}else{
 			if(this.getRemain2()==1)this.setRemain2(0);
-			moveSpeed = 0.2F;
+			sp = 0.2F;
 		}
-		float movesp = moveSpeed;
-		if(this.move_type==5 && this.getMoveType()!=2)movesp = moveSpeed*1.5F;
+		float movesp = sp;
+		if(this.move_type==5 && this.getMoveType()!=2)movesp = sp*1.5F;
 		this.moveway(this, movesp, this.attack_range_max);
 		
 		boolean isAttackVehicle = false;
 		if(this.getTarget()!=null && this.isAttacking() && (this.getVehicle()==null||this.canfire)){
 			if(movecool>99){
-				this.move_type=this.level().random.nextInt(6);
+				this.move_type=this.level.random.nextInt(6);
 				movecool = 0;
 			}
 			LivingEntity livingentity = this.getTarget();
@@ -223,12 +226,12 @@ public class EntityAohuan extends EntityMobSquadBase{
 			if(this.isAttacking() && this.find_time<40 && this.getRemain1()>0){
 				++this.find_time;
 			}
-			if(this.level().random.nextInt(6) >= 3 && this.find_time > 20){
+			if(this.level.random.nextInt(6) >= 3 && this.find_time > 20){
 				if((this.mainWeaponId!=this.getWeaponId()||!isAttackVehicle) && this.changeWeaponId!=0 && this.aim_time>60)this.setWeaponId(this.mainWeaponId);//main
 				this.setRemain2(2);
 				if(this.getRemain1()>this.magazine)this.setRemain1(this.magazine);
 				this.find_time = 0;
-			}else if(this.level().random.nextInt(6) < 3 && this.find_time > 20){
+			}else if(this.level.random.nextInt(6) < 3 && this.find_time > 20){
 				if(this.changeWeaponId!=0 && !isAttackVehicle&&this.getRemain1()>0 && this.aim_time>60){
 					if(this.soldierType!=2||this.soldierType==2&&this.distanceTo(livingentity)<this.attack_range_max*0.2F)this.setWeaponId(this.changeWeaponId);
 				}
@@ -254,12 +257,12 @@ public class EntityAohuan extends EntityMobSquadBase{
 					double px = this.getX();
 					double py = this.getY();
 					double pz = this.getZ();
-					AI_EntityWeapon.Attacktask(this, this, this.getTarget(), this.bulletid, this.bulletmodel1, this.bullettex1, this.firefx1, this.bulletfx1, this.firesound1,side, this.fireposX,this.fireposY,this.fireposZ,this.firebaseX,this.firebaseZ,px, py, pz,this.getYRot(), this.getXRot(),this.bulletdamage, this.bulletspeed, this.bulletspread, this.bulletexp, this.bulletdestroy, this.bulletcount, this.bulletgravity, this.bullettime, this.bullettype);
+					AI_EntityWeapon.Attacktask(this, this, this.getTarget(), this.bulletid, this.bulletmodel1, this.bullettex1, this.firefx1, this.bulletfx1, this.firesound1,side, this.fireposX,this.fireposY,this.fireposZ,this.firebaseX,this.firebaseZ,px, py, pz,this.yRot, this.xRot,this.bulletdamage, this.bulletspeed, this.bulletspread, this.bulletexp, this.bulletdestroy, this.bulletcount, this.bulletgravity, this.bullettime, this.bullettype);
 					this.setRemain1(this.getRemain1() - 1);
 					this.guncyle = 0;
 					this.gun_count1 = 0;
 					++this.countlimit1;
-					if(this.countlimit1>(1+this.level().random.nextInt(8))||this.needaim){
+					if(this.countlimit1>(1+this.level.random.nextInt(8))||this.needaim){
 						this.counter1 = false;
 						this.countlimit1 = 0;
 					}

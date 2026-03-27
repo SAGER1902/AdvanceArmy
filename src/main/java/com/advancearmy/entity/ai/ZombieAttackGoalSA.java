@@ -1,13 +1,13 @@
 package advancearmy.entity.ai;
-//import net.minecraft.util.Hand;
-
-import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
-import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.util.Hand;
+import net.minecraft.entity.monster.ZombieEntity;
+import net.minecraft.entity.ai.goal.MeleeAttackGoal;
+import net.minecraft.entity.CreatureEntity;
 public class ZombieAttackGoalSA extends MeleeAttackGoal {
-   private final PathfinderMob zombie;
+   private final CreatureEntity zombie;
    private int raiseArmTicks;
 
-   public ZombieAttackGoalSA(PathfinderMob p_i46803_1_, double p_i46803_2_, boolean p_i46803_4_) {
+   public ZombieAttackGoalSA(CreatureEntity p_i46803_1_, double p_i46803_2_, boolean p_i46803_4_) {
       super(p_i46803_1_, p_i46803_2_, p_i46803_4_);
       this.zombie = p_i46803_1_;
    }

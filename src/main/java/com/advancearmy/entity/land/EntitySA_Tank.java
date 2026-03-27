@@ -1,32 +1,31 @@
 package advancearmy.entity.land;
 import java.util.List;
 
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.level.Level;
-
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraftforge.network.PlayMessages;
+import net.minecraft.entity.Entity;
 import net.minecraftforge.fml.ModList;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
-
+import net.minecraft.world.World;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.MobEntity;
+import net.minecraft.entity.EntityType;
+import net.minecraftforge.fml.network.FMLPlayMessages;
 import wmlib.common.living.WeaponVehicleBase;
 import advancearmy.entity.ai.AI_EntityWeapon;
 import advancearmy.AdvanceArmy;
 import advancearmy.entity.EntitySA_LandBase;
 import advancearmy.event.SASoundEvent;
-import advancearmy.entity.EntitySA_Seat;
-import advancearmy.init.ModEntities;
 import safx.SagerFX;
+import advancearmy.entity.EntitySA_Seat;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.potion.Effects;
+import net.minecraft.potion.EffectInstance;
+import net.minecraft.entity.player.PlayerEntity;
+import wmlib.common.network.PacketHandler;
+import wmlib.common.network.message.MessageFX;
+import net.minecraftforge.fml.network.PacketDistributor;
+import net.minecraft.util.text.TranslationTextComponent;
 public class EntitySA_Tank extends EntitySA_LandBase{
-	public EntitySA_Tank(EntityType<EntitySA_Tank>type, Level worldIn) {
-		super(type, worldIn);
-		this.setMaxUpStep(1.5F);
+	public EntitySA_Tank(EntityType<? extends EntitySA_Tank> sodier, World worldIn) {
+		super(sodier, worldIn);
 		seatPosX[0] = 1.07F;
 		seatPosY[0] = 1.1F;
 		seatPosZ[0] = 2F;
@@ -34,7 +33,7 @@ public class EntitySA_Tank extends EntitySA_LandBase{
 		seatHide[0] = true;
 		seatMaxCount = 2;
 		seatPosX[1] = -0.64F;
-		seatPosY[1] = 2.5F;
+		seatPosY[1] = 2.55F;
 		seatPosZ[1] = -1F;
 		seatTurret[1] = true;
 		this.render_hud_box = true;
@@ -43,10 +42,12 @@ public class EntitySA_Tank extends EntitySA_LandBase{
 		this.renderHudIcon = false;
 		this.renderHudOverlay = false;
 		this.renderHudOverlayZoom = false;
-		this.icon1tex = ResourceLocation.tryParse("advancearmy:textures/hud/m1head.png");
-		this.icon2tex = ResourceLocation.tryParse("advancearmy:textures/hud/m1body.png");
-		this.w1name = "120mmHEAT";
-		this.w2name = "7,62mmMG";
+		this.icon1tex = new ResourceLocation("advancearmy:textures/hud/m1head.png");
+		this.icon2tex = new ResourceLocation("advancearmy:textures/hud/m1body.png");
+		this.w1name = new TranslationTextComponent("advancearmy.weapon.120cannon.desc").getString();
+		this.w2name = new TranslationTextComponent("advancearmy.weapon.762gun.desc").getString();
+		this.w2name = "vehicle.weapon.cloud.desc";
+		this.w4name = "vehicle.weapon.fix.desc";
 		this.seatView1X = 0F;
 		this.seatView1Y = 0F;
 		this.seatView1Z = 0.01F;
@@ -65,6 +66,7 @@ public class EntitySA_Tank extends EntitySA_LandBase{
 		this.throttleMin = -2F;
 		this.thFrontSpeed = 0.3F;
 		this.thBackSpeed = -0.3F;
+		this.maxUpStep = 1.5F;
 		this.canNightV=true;
 		this.armor_front = 60;
 		this.armor_side = 50;
@@ -76,7 +78,7 @@ public class EntitySA_Tank extends EntitySA_LandBase{
 		this.armor_turret_front = 60;
 		this.armor_turret_side = 60;
 		this.armor_turret_back = 30;
-
+		
 		this.ammo1=5;
 		this.ammo2=3;
 		this.fireposX1 = 0;
@@ -107,18 +109,9 @@ public class EntitySA_Tank extends EntitySA_LandBase{
 		this.w4icon="wmlib:textures/hud/repair.png";
 	}
 
-	public EntitySA_Tank(PlayMessages.SpawnEntity packet, Level worldIn) {//
-		super(ModEntities.ENTITY_TANK.get(), worldIn);
+	public EntitySA_Tank(FMLPlayMessages.SpawnEntity packet, World worldIn) {//
+		super(AdvanceArmy.ENTITY_TANK, worldIn);
 	}
-
-    public static AttributeSupplier.Builder createAttributes() {
-        return EntitySA_Tank.createMobAttributes()
-                .add(Attributes.MAX_HEALTH, 400)
-                .add(Attributes.ARMOR, 10)
-                .add(Attributes.FOLLOW_RANGE, 50)
-                .add(Attributes.KNOCKBACK_RESISTANCE, 20)
-                .add(Attributes.MOVEMENT_SPEED, 0);
-    }
 
 	public void tick() {
 		super.tick();
@@ -129,12 +122,15 @@ public class EntitySA_Tank extends EntitySA_LandBase{
 				String tex = "advancearmy:textures/entity/bullet/bullet12.7.png";
 				String fx1 = "SmokeGun";
 				String fx2 = null;
+				seat.renderHudIcon = true;
+				seat.hudIcon = "wmlib:textures/hud/cross2.png";
 				seat.seatProtect = 0.8F;
 				seat.attack_range_max = 35;
 				seat.seatHide = false;
 				seat.ridding_rotemgPitch = true;
 				seat.weaponCount = 1;
 				seat.ammo1 = 5;
+				seat.w1name = new TranslationTextComponent("advancearmy.weapon.127gun.desc").getString();
 				seat.magazine = 100;
 				seat.reload_time1 = 80;
 				seat.reloadSound1 = SASoundEvent.reload_mag.get();
@@ -142,8 +138,8 @@ public class EntitySA_Tank extends EntitySA_LandBase{
 				seat.setWeapon(0, 0, model, tex, fx1, fx2, SASoundEvent.fire_m2hb.get(), 0,1,3,0,0.38F,
 				10, 6F, 1.25F, 1, false, 1, 0.01F, 20, 0);
 			}
-			this.turretYaw1=seat.getYHeadRot();
-			if(seat.turretPitch<15)this.turretPitch1=seat.turretPitch;
+			this.turretYaw_1=seat.getYHeadRot();
+			if(seat.turretPitch<15)this.turretPitch_1=seat.turretPitch;
 			if(seat.getRemain1()>0){
 				ammo = true;
 				if(seat.fire1){
@@ -163,44 +159,50 @@ public class EntitySA_Tank extends EntitySA_LandBase{
 		}else{
 			this.firesound2=SASoundEvent.fire_usvg_3p.get();
 		}
-		if (this.getFirstSeat() != null && this.getFirstSeat().getControllingPassenger()!=null) {
-			EntitySA_Seat seat = (EntitySA_Seat)this.getFirstSeat();
-			if(seat.keyv){
-				if(cooltime3>150)cooltime3=0;
-				if(this.getRemain4() > 0){
-					if(this.getHealth() < this.getMaxHealth() && this.getHealth() > 0.0F) {
-						++healtime;
-						if(healtime > 2){
-							this.setHealth(this.getHealth() + 1);
-							this.playSound(SASoundEvent.fix.get(), 1.0F, 1.0F);
-							healtime=0;
-						}
-					}
-				}
-				if(cooltime3>80){
-					this.setRemain4(0);
-					seat.keyv = false;
-				}
-			}
-			if(seat.keyx){
-				if(this.getRemain3() > 0){
-					if(ModList.get().isLoaded("safx"))SagerFX.proxy.createFX("TankSmoke", null, this.getX(), this.getY(), this.getZ(), 0, 0, 0, 1);
-					List<Entity> list = this.level().getEntities(this, this.getBoundingBox().inflate(6D, 3.0D, 6D));
-					for(int k2 = 0; k2 < list.size(); ++k2) {
-						Entity attackentity = list.get(k2);
-						if(attackentity instanceof Mob && ((Mob)attackentity).getHealth()>0 && attackentity!=this){
-							Mob living = (Mob)attackentity;
-							if(this.CanAttack(attackentity)){
-								living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 200,5));
-								living.setTarget(null);
-								living.setDeltaMovement(0,0,0);
+		if (this.getFirstSeat() != null && this.getFirstSeat().getControllingPassenger()!=null){
+			if (this.getFirstSeat() != null) {
+				EntitySA_Seat seat = (EntitySA_Seat)this.getFirstSeat();
+				if(seat.keyv){
+					if(cooltime3>150)cooltime3=0;
+					if(this.getRemain4() > 0){
+						if(this.getHealth() < this.getMaxHealth() && this.getHealth() > 0.0F) {
+							++healtime;
+							if(healtime > 2){
+								this.setHealth(this.getHealth() + 1);
+								this.playSound(SASoundEvent.fix.get(), 1.0F, 1.0F);
+								healtime=0;
 							}
 						}
 					}
-					this.playSound(SASoundEvent.shell_impact.get(), 3.0F, 1.0F);
-					this.setRemain3(0);
+					if(cooltime3>80){
+						this.setRemain4(0);
+						seat.keyv = false;
+					}
 				}
-				seat.keyx = false;
+				if(seat.keyx){
+					if(this.getRemain3() > 0){
+						if(ModList.get().isLoaded("safx")){
+							//SagerFX.proxy.createFX("TankSmoke", null, this.getX(), this.getY(), this.getZ(), 0, 0, 0, 1);
+							MessageFX messagefx = new MessageFX("TankSmoke", this.getX(), this.getY(), this.getZ(), 0, 0, 0, 1);
+							PacketHandler.getPlayChannel2().send(PacketDistributor.NEAR.with(() -> new PacketDistributor.TargetPoint(this.getX(), this.getY(), this.getZ(), 80, this.level.dimension())), messagefx);
+						}
+						List<Entity> list = this.level.getEntities(this, this.getBoundingBox().inflate(6D, 3.0D, 6D));
+						for(int k2 = 0; k2 < list.size(); ++k2) {
+							Entity attackentity = list.get(k2);
+							if(attackentity instanceof MobEntity && ((MobEntity)attackentity).getHealth()>0 && attackentity!=this){
+								MobEntity living = (MobEntity)attackentity;
+								if(this.CanAttack(attackentity)){
+									living.addEffect(new EffectInstance(Effects.MOVEMENT_SLOWDOWN, 200,5));
+									living.setTarget(null);
+									living.setDeltaMovement(0,0,0);
+								}
+							}
+						}
+						this.playSound(SASoundEvent.shell_impact.get(), 3.0F, 1.0F);
+						this.setRemain3(0);
+					}
+					seat.keyx = false;
+				}
 			}
 		}
 	}
@@ -211,7 +213,7 @@ public class EntitySA_Tank extends EntitySA_LandBase{
 		String fx1 = "AdvTankFire";
 		String fx2 = null;//PlaneTrail
 		LivingEntity shooter = this;
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
 		AI_EntityWeapon.Attacktask(this, shooter, this.getTarget(), 3, model, tex, fx1, fx2, firesound1,
 		1F, this.fireposX1,this.fireposY1,this.fireposZ1,this.firebaseX,this.firebaseZ,
 		this.getX(), this.getY(), this.getZ(),this.turretYaw, this.turretPitch,
@@ -221,9 +223,9 @@ public class EntitySA_Tank extends EntitySA_LandBase{
 		String model = "advancearmy:textures/entity/bullet/bullet.obj";
 		String tex = "advancearmy:textures/entity/bullet/bullet.png";
 		String fx1 = "SmokeGun";
-		String fx2 = /*"PlaneTrail"*/null;
+		String fx2 = null;
 		LivingEntity shooter = this;
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
 		AI_EntityWeapon.Attacktask(this, shooter, this.getTarget(), 1, model, tex, fx1, fx2, firesound2,
 		1F, this.fireposX2,this.fireposY2,this.fireposZ2,this.firebaseX,this.firebaseZ,
 		this.getX(), this.getY(), this.getZ(),this.turretYaw, this.turretPitch,

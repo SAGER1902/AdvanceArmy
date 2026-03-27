@@ -1,39 +1,39 @@
 package advancearmy.entity.land;
 import java.util.List;
 import net.minecraftforge.fml.ModList;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.network.PlayMessages;
+import net.minecraft.world.World;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.EntityType;
+import net.minecraftforge.fml.network.FMLPlayMessages;
 import wmlib.common.living.WeaponVehicleBase;
 import advancearmy.entity.ai.AI_EntityWeapon;
 import advancearmy.AdvanceArmy;
 import advancearmy.event.SASoundEvent;
 import safx.SagerFX;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.ResourceLocation;
 import wmlib.client.obj.SAObjModel;
 import advancearmy.entity.EntitySA_LandBase;
-import net.minecraft.util.Mth;
+import net.minecraft.util.math.MathHelper;
 import advancearmy.entity.EntitySA_Seat;
-import net.minecraft.world.phys.Vec2;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.DamageSource;
 import wmlib.common.world.WMExplosionBase;
 import wmlib.common.network.PacketHandler;
 import wmlib.common.network.message.MessageTrail;
-import net.minecraftforge.network.PacketDistributor;
-import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.fml.network.PacketDistributor;
+import net.minecraft.util.math.vector.Vector2f;
+import net.minecraft.entity.Entity;
+import net.minecraft.block.BlockState;
+import net.minecraft.entity.EntityPredicate;
+import net.minecraft.entity.MobEntity;
+import net.minecraft.util.text.TranslationTextComponent;
 
-import net.minecraft.world.entity.Mob;
-import net.minecraft.network.chat.Component;
-import advancearmy.init.ModEntities;
-import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.potion.Effects;
+import net.minecraft.potion.EffectInstance;
 public class EntitySA_Tesla extends EntitySA_LandBase{
-	public EntitySA_Tesla(EntityType<? extends EntitySA_Tesla> sodier, Level worldIn) {
+	public EntitySA_Tesla(EntityType<? extends EntitySA_Tesla> sodier, World worldIn) {
 		super(sodier, worldIn);
 		seatPosX[0] = 0F;
 		seatPosY[0] = 2.2F;
@@ -47,7 +47,7 @@ public class EntitySA_Tesla extends EntitySA_LandBase{
 		this.renderHudIcon = false;
 		this.renderHudOverlay = false;
 		this.renderHudOverlayZoom = false;
-		this.w1name = Component.translatable("Tesla MKII").getString();
+		this.w1name = new TranslationTextComponent("Tesla MKII").getString();
 		this.seatView1X = 0F;
 		this.seatView1Y = 0F;
 		this.seatView1Z = 0.01F;
@@ -78,17 +78,17 @@ public class EntitySA_Tesla extends EntitySA_LandBase{
 		this.throttleMin = -4F;
 		this.thFrontSpeed = 0.3F;
 		this.thBackSpeed = -0.3F;
-		this.setMaxUpStep(1.5F);
+		this.maxUpStep = 1.5F;
 		this.w1barrelsize = 0.4F;
 		this.fireposX1 = 1.72F;
 		this.fireposY1 = 1.5F;
 		this.fireposZ1 = 3.7F;
 		this.firebaseZ = 3.7F;
-		this.icon1tex = ResourceLocation.tryParse("advancearmy:textures/hud/teslahead.png");
-		this.icon2tex = ResourceLocation.tryParse("advancearmy:textures/hud/teslabody.png");
-		this.tracktex = ResourceLocation.tryParse("advancearmy:textures/mob/track.png");
+		this.icon1tex = new ResourceLocation("advancearmy:textures/hud/teslahead.png");
+		this.icon2tex = new ResourceLocation("advancearmy:textures/hud/teslabody.png");
+		this.tracktex = new ResourceLocation("advancearmy:textures/mob/track.png");
 		this.obj = new SAObjModel("advancearmy:textures/mob/tesla.obj");
-		this.tex = ResourceLocation.tryParse("advancearmy:textures/mob/tesla.png");
+		this.tex = new ResourceLocation("advancearmy:textures/mob/tesla.png");
 		this.magazine = 2;
 		this.reload_time1 = 60;
 		this.reloadSound1 = SASoundEvent.teslareload.get();
@@ -117,11 +117,11 @@ public class EntitySA_Tesla extends EntitySA_LandBase{
 		this.setWheel(5,0, 0.91F, -2.31F);
 	}
 
-	public EntitySA_Tesla(PlayMessages.SpawnEntity packet, Level worldIn) {//
-		super(ModEntities.ENTITY_TESLA.get(), worldIn);
+	public EntitySA_Tesla(FMLPlayMessages.SpawnEntity packet, World worldIn) {//
+		super(AdvanceArmy.ENTITY_TESLA, worldIn);
 	}
-	public Vec2 getLockVector() {
-	  return new Vec2(this.turretPitch, this.turretYaw);
+	public Vector2f getLockVector() {
+	  return new Vector2f(this.turretPitch, this.turretYaw);
 	}
 
 	LivingEntity lockTarget = null;
@@ -156,8 +156,8 @@ public class EntitySA_Tesla extends EntitySA_LandBase{
 				connect=2;
 			}
 			
-			if (this.getFirstSeat() != null){
-				if (this.getFirstSeat() != null){
+			if (this.getFirstSeat() != null) {
+				if (this.getFirstSeat() != null) {
 					EntitySA_Seat seat = (EntitySA_Seat)this.getFirstSeat();
 					if(seat.keyv){
 						if(cooltime3>150)cooltime3=0;
@@ -208,16 +208,16 @@ public class EntitySA_Tesla extends EntitySA_LandBase{
 		double xx11 = 0;
 		double zz11 = 0;
 		float base = 0;
-		xx11 -= Mth.sin(this.turretYaw * 0.01745329252F) * this.fireposZ1;
-		zz11 += Mth.cos(this.turretYaw * 0.01745329252F) * this.fireposZ1;
-		xx11 -= Mth.sin(this.turretYaw * 0.01745329252F + 1.57F) * fireX;
-		zz11 += Mth.cos(this.turretYaw * 0.01745329252F + 1.57F) * fireX;
+		xx11 -= MathHelper.sin(this.turretYaw * 0.01745329252F) * this.fireposZ1;
+		zz11 += MathHelper.cos(this.turretYaw * 0.01745329252F) * this.fireposZ1;
+		xx11 -= MathHelper.sin(this.turretYaw * 0.01745329252F + 1.57F) * fireX;
+		zz11 += MathHelper.cos(this.turretYaw * 0.01745329252F + 1.57F) * fireX;
 		LivingEntity shooter = this;
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
 		{
 			if(ModList.get().isLoaded("safx") && teslaid==3)SagerFX.proxy.createFX("TeslaFlashGun", null, this.getX()+xx11, this.getBoundingBox().minY + this.fireposY1+1.5F, this.getZ()+zz11, 0, 0, 0, 2);
 		}
-		Vec3 locken = Vec3.directionFromRotation(this.getLockVector());//getLookAngle
+		Vector3d locken = Vector3d.directionFromRotation(this.getLockVector());//getLookAngle
 		float d = 120;
 		int range = 3;
 		double ix = 0;
@@ -230,38 +230,38 @@ public class EntitySA_Tesla extends EntitySA_LandBase{
 			ix = (this.getX()+xx11 + locken.x * xxx);
 			iy = (this.getY()+this.fireposY1+base + locken.y * xxx);
 			iz = (this.getZ()+zz11 + locken.z * xxx);
-			BlockPos blockpos = new BlockPos((int)ix, (int)iy, (int)iz);
-			BlockState iblockstate = this.level().getBlockState(blockpos);
-			if (!iblockstate.isAir()&& !iblockstate.getCollisionShape(this.level(), blockpos).isEmpty()){
+			BlockPos blockpos = new BlockPos(ix, iy, iz);
+			BlockState iblockstate = this.level.getBlockState(blockpos);
+			if (!iblockstate.isAir(this.level, blockpos)&& !iblockstate.getCollisionShape(this.level, blockpos).isEmpty()){
 				break;
 			}else{
-				AABB axisalignedbb = (new AABB(ix-range, iy-range, iz-range, 
+				AxisAlignedBB axisalignedbb = (new AxisAlignedBB(ix-range, iy-range, iz-range, 
 						ix+range, iy+range, iz+range)).inflate(1D);
-				List<Entity> llist = this.level().getEntities(this,axisalignedbb);
+				List<Entity> llist = this.level.getEntities(this,axisalignedbb);
 				if (llist != null) {
 					for (int lj = 0; lj < llist.size(); lj++) {
 						Entity entity1 = (Entity) llist.get(lj);
 						if (entity1 != null && entity1 instanceof LivingEntity) {
 							if (NotFriend(entity1) && entity1 != shooter && entity1 != this) {
 								lockTarget = (LivingEntity)entity1;
-								if(lockTarget.getVehicle()!=null){
-									Entity ve = lockTarget.getVehicle();
+								if(lockTarget.getVehicle()!=null && lockTarget.getVehicle() instanceof LivingEntity){
+									LivingEntity ve = (LivingEntity)lockTarget.getVehicle();
 									ve.invulnerableTime = 0;
-									ve.hurt(this.damageSources().thrown(this, shooter), damage);
-									//ve.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100,10));
+									ve.hurt(DamageSource.thrown(this, shooter), damage);
+									ve.addEffect(new EffectInstance(Effects.MOVEMENT_SLOWDOWN, 100,10));
 								}else{
 									lockTarget.invulnerableTime = 0;
-									lockTarget.hurt(this.damageSources().thrown(this, shooter), damage);
-									lockTarget.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100,10));
+									lockTarget.hurt(DamageSource.thrown(this, shooter), damage);
+									lockTarget.addEffect(new EffectInstance(Effects.MOVEMENT_SLOWDOWN, 100,10));
 								}
 								if(lockTarget!=null){
 									int count=0;
-									List<Entity> entities = lockTarget.level().getEntities(lockTarget, lockTarget.getBoundingBox().inflate(18D, 10.0D, 18D));
+									List<Entity> entities = lockTarget.level.getEntities(lockTarget, lockTarget.getBoundingBox().inflate(18D, 10.0D, 18D));
 									for (Entity living : entities) {
 										if(this.NotFriend(living) && living instanceof LivingEntity){
 											LivingEntity target = (LivingEntity)living;
-											target.hurt(this.damageSources().thrown(this, shooter), damage*0.5F);
-											target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 50,10));
+											target.hurt(DamageSource.thrown(this, shooter), damage*0.5F);
+											target.addEffect(new EffectInstance(Effects.MOVEMENT_SLOWDOWN, 50,10));
 											{
 												if(ModList.get().isLoaded("safx") && teslaid==3)SagerFX.proxy.createFX("TeslaHit", null, target.getX(), target.getBoundingBox().minY + target.getEyeHeight()/2F+1F, target.getZ(), 0, 0, 0, 0.5F);
 												MessageTrail messageBulletTrail = new MessageTrail(true, teslaid, "advancearmy:textures/entity/flash/mirage" , 
@@ -269,7 +269,7 @@ public class EntitySA_Tesla extends EntitySA_LandBase{
 												target.getDeltaMovement().x, target.getDeltaMovement().z, 
 												target.getX(), target.getY()+target.getBbHeight()*0.25F, target.getZ(),
 												20F, 0.5F);
-												PacketHandler.getPlayChannel_Client().send(PacketDistributor.NEAR.with(() -> new PacketDistributor.TargetPoint(target.getX(), target.getY(), target.getZ(), 80, target.level().dimension())), messageBulletTrail);
+												PacketHandler.getPlayChannel2().send(PacketDistributor.NEAR.with(() -> new PacketDistributor.TargetPoint(target.getX(), target.getY(), target.getZ(), 80, target.level.dimension())), messageBulletTrail);
 											}
 											++count;
 											if(count>connect)break;
@@ -293,6 +293,6 @@ public class EntitySA_Tesla extends EntitySA_LandBase{
 		WMExplosionBase.createExplosionDamage(this, ix, iy+1.5D, iz,10, 2, false,  false);
 		if(ModList.get().isLoaded("safx") && teslaid==3)SagerFX.proxy.createFX("TeslaHit", null, ix, iy+1.5D, iz, 0, 0, 0, 2);
 		MessageTrail messageBulletTrail = new MessageTrail(true, teslaid, "advancearmy:textures/entity/flash/prism_beam" ,this.getX()+xx11, this.getY()+this.fireposY1+base, this.getZ()+zz11, this.getDeltaMovement().x, this.getDeltaMovement().z, ix, iy+0.5D, iz, 20F, 1);
-		PacketHandler.getPlayChannel_Client().send(PacketDistributor.NEAR.with(() -> new PacketDistributor.TargetPoint(this.getX(), this.getY(), this.getZ(), 80, this.level().dimension())), messageBulletTrail);
+		PacketHandler.getPlayChannel2().send(PacketDistributor.NEAR.with(() -> new PacketDistributor.TargetPoint(this.getX(), this.getY(), this.getZ(), 80, this.level.dimension())), messageBulletTrail);
 	}
 }

@@ -6,111 +6,106 @@ import advancearmy.AdvanceArmy;
 import wmlib.common.bullet.EntityBullet;
 import wmlib.common.bullet.EntityShell;
 import advancearmy.event.SASoundEvent;
-import advancearmy.init.ModEntities;
+
 import net.minecraft.world.Difficulty;
-import net.minecraft.world.level.Level;
-import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.World;
+import net.minecraft.world.server.ServerWorld;
 
-import net.minecraft.world.InteractionHand;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Hand;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.SoundCategory;
 
-import net.minecraft.network.chat.Component;
+import net.minecraft.util.text.TranslationTextComponent;
 
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.core.BlockPos;
-import net.minecraft.util.Mth;
-import net.minecraft.world.phys.Vec3;
-import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.DamageSource;
+import net.minecraft.util.SoundEvent;
+import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.SoundEvents;
 
-import net.minecraft.world.item.Items;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.level.block.Blocks;
+import net.minecraft.item.Items;
+import net.minecraft.item.Item;
+import net.minecraft.block.Blocks;
 
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.scores.Team;
+import net.minecraft.item.ItemStack;
+import net.minecraft.scoreboard.Team;
+import net.minecraft.block.material.Material;
 
+import net.minecraft.network.IPacket;
+import net.minecraft.network.datasync.DataParameter;
+import net.minecraft.network.datasync.DataSerializers;
+import net.minecraft.network.datasync.EntityDataManager;
 
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.syncher.EntityDataAccessor;
-import net.minecraft.network.syncher.EntityDataSerializers;
-import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.NBTUtil;
 
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtUtils;
+import net.minecraft.entity.ai.attributes.AttributeModifierMap;
+import net.minecraft.entity.ai.attributes.Attributes;
 
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.entity.IRangedAttackMob;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.monster.IMob;
+import net.minecraft.entity.Entity;
 
+import net.minecraft.entity.CreatureEntity;
+import net.minecraft.entity.LivingEntity;
 
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.world.entity.Entity;
+import net.minecraft.entity.MobEntity;
+import net.minecraft.entity.MoverType;
+import net.minecraft.entity.EntitySize;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.Pose;
 
-import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.LivingEntity;
-
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.MoverType;
-import net.minecraft.world.entity.EntityDimensions;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.Pose;
-
-import net.minecraftforge.network.PlayMessages;
-import net.minecraftforge.network.NetworkHooks;
+import net.minecraftforge.fml.network.FMLPlayMessages;
+import net.minecraftforge.fml.network.NetworkHooks;
 
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
-import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
-import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
+import net.minecraft.entity.ai.goal.LookAtGoal;
+import net.minecraft.entity.ai.goal.LookRandomlyGoal;
 
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.network.chat.Component;
+import net.minecraft.entity.ai.goal.WaterAvoidingRandomWalkingGoal;
+import net.minecraft.entity.ai.goal.FollowOwnerGoal;
 
-import net.minecraft.world.entity.ai.goal.target.OwnerHurtByTargetGoal;
-import net.minecraft.world.entity.ai.goal.target.OwnerHurtTargetGoal;
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.ai.targeting.TargetingConditions;
+import net.minecraft.inventory.EquipmentSlotType;
+import net.minecraft.util.ActionResultType;
+
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.Style;
+import net.minecraft.util.text.TranslationTextComponent;
+
+import net.minecraft.entity.ai.goal.OwnerHurtByTargetGoal;
+import net.minecraft.entity.ai.goal.OwnerHurtTargetGoal;
+import net.minecraft.entity.item.ItemEntity;
+import net.minecraft.entity.EntityPredicate;
 import java.util.function.Predicate;
 
 import net.minecraftforge.fml.ModList;
-import net.minecraft.world.entity.TamableAnimal;
-
+import net.minecraft.entity.passive.TameableEntity;
+import com.hungteen.pvz.common.entity.zombie.PVZZombieEntity;
 import wmlib.common.living.EntityWMSeat;
 import wmlib.common.living.ai.LivingLockGoal;
-import wmlib.common.living.ai.LivingSearchTargetGoalSA;
 import advancearmy.entity.ai.WaterAvoidingRandomWalkingGoalSA;
 import advancearmy.entity.EntitySA_SoldierBase;
-import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.particles.ParticleTypes;
 import safx.SagerFX;
-import advancearmy.entity.ai.SoldierSearchTargetGoalSA;
+import advancearmy.entity.ai.SoldierAttackableTargetGoalSA;
 import advancearmy.util.InteractSoldier;
-
-import advancearmy.util.TargetSelect;
 public class EntitySA_ConscriptX extends EntitySA_SoldierBase{
-	public EntitySA_ConscriptX(EntityType<? extends EntitySA_ConscriptX> sodier, Level worldIn) {
+	public EntitySA_ConscriptX(EntityType<? extends EntitySA_ConscriptX> sodier, World worldIn) {
 		super(sodier, worldIn);
 		this.attack_range_max = 35;
 	}
-	public static AttributeSupplier.Builder createAttributes() {
-        return EntitySA_ConscriptX.createMobAttributes()
-		.add(Attributes.MAX_HEALTH, 500.0D)
-					.add(Attributes.KNOCKBACK_RESISTANCE, (double) 5.0F)
-					.add(Attributes.MOVEMENT_SPEED, (double)0.5F)
-					.add(Attributes.FOLLOW_RANGE, 100.0D)
-					.add(Attributes.ARMOR, (double) 50D);
-    }
-	public boolean causeFallDamage(float p_225503_1_, float p_225503_2_, DamageSource damageSource) {
-		List<Entity> list = this.level().getEntities(this, this.getBoundingBox().inflate(4D, 2.0D, 4D));
+	public boolean causeFallDamage(float p_225503_1_, float p_225503_2_) {
+		List<Entity> list = this.level.getEntities(this, this.getBoundingBox().inflate(4D, 2.0D, 4D));
 		for(int k2 = 0; k2 < list.size(); ++k2) {
 			Entity entity = list.get(k2);
 			if(entity!=null && entity instanceof LivingEntity && entity!=this){
 				if(entity instanceof LivingEntity && this.CanAttack(entity)){
-					entity.hurt(this.damageSources().thrown(this, this), 6);
+					entity.hurt(DamageSource.thrown(this, this), 6);
 					this.playSound(SASoundEvent.sickle_land.get(), 5.0F,1);
 				}
 				((LivingEntity)entity).knockback(0.8F, 3F, 3);
@@ -119,11 +114,11 @@ public class EntitySA_ConscriptX extends EntitySA_SoldierBase{
 		if(ModList.get().isLoaded("safx"))SagerFX.proxy.createFX("DropRing", null, this.getX(), this.getY(), this.getZ(), 0F, 0F, 0F, 1F);
 	  return false;
 	}
-	public EntitySA_ConscriptX(PlayMessages.SpawnEntity packet, Level worldIn) {
-		super(ModEntities.ENTITY_CONSX.get(), worldIn);
+	public EntitySA_ConscriptX(FMLPlayMessages.SpawnEntity packet, World worldIn) {
+		super(AdvanceArmy.ENTITY_CONSX, worldIn);
 	}
 	
-	public float getStandingEyeHeight(Pose poseIn, EntityDimensions sizeIn) {
+	public float getStandingEyeHeight(Pose poseIn, EntitySize sizeIn) {
 		return this.getBbHeight()-0.3F;
 	}
 
@@ -134,61 +129,87 @@ public class EntitySA_ConscriptX extends EntitySA_SoldierBase{
 	public double getMountedYOffset() {
 		return 0.6D;//0.12D
 	}
-    private static final EntityDataAccessor<Integer> movetype = 
-    		SynchedEntityData.<Integer>defineId(EntitySA_ConscriptX.class, EntityDataSerializers.INT);
-	public void addAdditionalSaveData(CompoundTag compound)
+    private static final DataParameter<Integer> action = 
+    		EntityDataManager.<Integer>defineId(EntitySA_ConscriptX.class, DataSerializers.INT);
+	public void addAdditionalSaveData(CompoundNBT compound)
 	{
 		super.addAdditionalSaveData(compound);
 		{
-			compound.putInt("movetype", getMoveTypeX());
+			compound.putInt("action", getAction());
 		}
 	}
-	public void readAdditionalSaveData(CompoundTag compound)
+	public void readAdditionalSaveData(CompoundNBT compound)
 	{
 	   super.readAdditionalSaveData(compound);
 		{
-			this.setMoveTypeX(compound.getInt("movetype"));
+			this.setAction(compound.getInt("action"));
 		}
 	}
 	protected void defineSynchedData()
 	{
 		super.defineSynchedData();
-		this.entityData.define(movetype, Integer.valueOf(0));
+		this.entityData.define(action, Integer.valueOf(0));
 	}
-	public int getMoveTypeX() {
-		return ((this.entityData.get(movetype)).intValue());
+	public int getAction() {
+		return ((this.entityData.get(action)).intValue());
 	}
-	public void setMoveTypeX(int stack) {
-		this.entityData.set(movetype, Integer.valueOf(stack));
+	public void setAction(int stack) {
+		this.entityData.set(action, Integer.valueOf(stack));
 	}
 		
 	protected void registerGoals() {
 		this.goalSelector.addGoal(2, new WaterAvoidingRandomWalkingGoalSA(this, 1.0D, 1.0000001E-5F));
 		//this.goalSelector.addGoal(6, new FollowOwnerGoalSA(this, 1.0D, 10.0F, 2.0F, false));
-		this.goalSelector.addGoal(3, new LookAtPlayerGoal(this, Player.class, 6.0F));
-		this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
+		this.goalSelector.addGoal(3, new LookAtGoal(this, PlayerEntity.class, 6.0F));
+		this.goalSelector.addGoal(4, new LookRandomlyGoal(this));
 		this.goalSelector.addGoal(6, new LivingLockGoal(this, 1.0D, true));
 		this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
 		this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
-		this.targetSelector.addGoal(1, new SoldierSearchTargetGoalSA<>(this, Mob.class, 10, true, (attackentity) -> {
+		this.targetSelector.addGoal(1, new SoldierAttackableTargetGoalSA<>(this, MobEntity.class, 10, 15F, true, false, (attackentity) -> {
 			if(ModList.get().isLoaded("pvz")){
-				return attackentity instanceof Enemy/*||attackentity instanceof PVZZombieEntity*/;
+				return attackentity instanceof IMob||attackentity instanceof PVZZombieEntity;
 			}else{
 				return this.CanAttack(attackentity);
 			}
 		}));
 	}
 	
+	public static AttributeModifierMap.MutableAttribute createAttributes() {
+		return EntitySA_SoldierBase.createMonsterAttributes()
+		.add(Attributes.MAX_HEALTH, 40.0D)
+		.add(Attributes.KNOCKBACK_RESISTANCE, (double) 5.0F)
+		.add(Attributes.MOVEMENT_SPEED, (double)0.23F)
+		.add(Attributes.FOLLOW_RANGE, 35.0D)
+		.add(Attributes.ARMOR, (double) 8D);
+	}
+	public static boolean getRange(float f1, float f2, float min, float max) {
+		float x = f1-f2;
+		if (x > min && x < max) {
+			return true;
+		} else {
+			return false;
+		}
+	}
     public boolean CanAttack(Entity entity){
 		if(entity instanceof LivingEntity && ((LivingEntity) entity).getHealth() > 0.0F){
 			double height = entity.getY() - this.getY();
 			if(this.distanceTo(entity)>this.attack_range_min && height >this.attack_height_min && height <this.attack_height_max){
-				if(TargetSelect.friendCanAttack(this,entity,this.getTarget())){
-					{
+				if(entity instanceof IMob||entity==this.getTarget()||entity==this.targetentity){
+					if(this.getVehicle()!=null && this.getVehicle() instanceof EntityWMSeat){
+						EntityWMSeat seat = (EntityWMSeat)this.getVehicle();
+						double d5 = entity.getX() - this.getX();
+						double d7 = entity.getZ() - this.getZ();
+						float yaw= -((float) Math.atan2(d5, d7)) * 180.0F / (float) Math.PI;
+						if(this.getRange(yaw, seat.yRot, seat.minyaw, seat.maxyaw)){
+							return true;
+						}else{
+							return false;
+						}
+					}else{
 						return true;
 					}
-					/*if(entity instanceof TamableAnimal){
-						TamableAnimal soldier = (TamableAnimal)entity;
+					/*if(entity instanceof TameableEntity){
+						TameableEntity soldier = (TameableEntity)entity;
 						if(this.getOwner()==soldier.getOwner()){
 							return false;
 						}else{
@@ -213,18 +234,18 @@ public class EntitySA_ConscriptX extends EntitySA_SoldierBase{
 		if(entity != null){
 			if(entity instanceof LivingEntity){
 				LivingEntity entity1 = (LivingEntity) entity;
-				boolean flag = this.getSensing().hasLineOfSight(entity1);
+				boolean flag = this.getSensing().canSee(entity1);
 				if(this.getOwner()==entity||this.getVehicle()==entity||this.getTeam()==entity.getTeam()&&this.getTeam()!=null){
 					return false;
 				}else{
-					if(entity instanceof TamableAnimal){
-						TamableAnimal soldier = (TamableAnimal)entity;
+					if(entity instanceof TameableEntity){
+						TameableEntity soldier = (TameableEntity)entity;
 						if(this.getOwner()!=null && this.getOwner()==soldier.getOwner()){
 							return false;
 						}else{
 							if(this.distanceTo(entity1)>8D && flag){
 								if(this.groundtime>50){
-									this.setMoveTypeX(2+this.level().random.nextInt(1));
+									this.setAction(2+this.level.random.nextInt(1));
 									this.setRemain2(3);
 									this.setTarget(entity1);
 								}
@@ -235,7 +256,7 @@ public class EntitySA_ConscriptX extends EntitySA_SoldierBase{
 					}else{
 						if(this.distanceToSqr(entity)>8D && flag){
 							if(this.groundtime>50){
-								this.setMoveTypeX(2+this.level().random.nextInt(1));
+								this.setAction(2+this.level.random.nextInt(1));
 								this.setRemain2(3);
 								this.setTarget(entity1);
 								this.groundtime = 0;
@@ -254,8 +275,8 @@ public class EntitySA_ConscriptX extends EntitySA_SoldierBase{
 			return super.hurt(source, par2);
 		}
     }
-	public boolean stand = false;
-	public InteractionResult mobInteract(Player player, InteractionHand hand) {
+	
+	public ActionResultType mobInteract(PlayerEntity player, Hand hand) {
 		InteractSoldier.interactSoldier(this,player,hand);
 		return super.mobInteract(player, hand);
     }
@@ -275,7 +296,7 @@ public class EntitySA_ConscriptX extends EntitySA_SoldierBase{
     }
 	
 	public boolean doHurtTarget(Entity entity) {
-		boolean flag = entity.hurt(this.damageSources().mobAttack(this), 20);
+		boolean flag = entity.hurt(DamageSource.mobAttack(this), 20);
 		if (flag) {
 			this.doEnchantDamageEffects(this, entity);
 		}
@@ -295,28 +316,28 @@ public class EntitySA_ConscriptX extends EntitySA_SoldierBase{
 	public static int gun_count1 = 0;
 	public int guncyle = 0;
 	
-	public EntityDimensions dimensions_s;
+	public EntitySize dimensions_s;
 	public void setSize(float w,float h){
-		dimensions_s = EntityDimensions.scalable(w,h);
+		dimensions_s = EntitySize.scalable(w,h);
 		double d0 = (double)dimensions_s.width / 2.0D;
-        this.setBoundingBox(new AABB(this.getX() - d0, this.getY(), this.getZ() - d0, this.getX() + d0, this.getY() + (double)dimensions_s.height, this.getZ() + d0));
+        this.setBoundingBox(new AxisAlignedBB(this.getX() - d0, this.getY(), this.getZ() - d0, this.getX() + d0, this.getY() + (double)dimensions_s.height, this.getZ() + d0));
 	}
 	
 	public void AIWeapon(double w, double h, double z, boolean shell, float bure, float speed){
 		double xx11 = 0;
 		double zz11 = 0;
-		xx11 -= Mth.sin(this.getYRot() * 0.01745329252F) * z;
-		zz11 += Mth.cos(this.getYRot() * 0.01745329252F) * z;
-		xx11 -= Mth.sin(this.getYRot() * 0.01745329252F + 1) * w;
-		zz11 += Mth.cos(this.getYRot() * 0.01745329252F + 1) * w;
-		EntityShell bullet = new EntityShell(this.level(), this);
+		xx11 -= MathHelper.sin(this.yRot * 0.01745329252F) * z;
+		zz11 += MathHelper.cos(this.yRot * 0.01745329252F) * z;
+		xx11 -= MathHelper.sin(this.yRot * 0.01745329252F + 1) * w;
+		zz11 += MathHelper.cos(this.yRot * 0.01745329252F + 1) * w;
+		EntityShell bullet = new EntityShell(this.level, this);
 		bullet.power = 20;
 		bullet.setBulletType(2);
 		bullet.setExLevel(1);
 		bullet.setGravity(0.01F);
-		bullet.moveTo(this.getX() + xx11, this.getY()+h, this.getZ() + zz11, this.getYRot(), this.getXRot());
-		bullet.shootFromRotation(this, this.getXRot(), this.getYRot(), 0.0F, speed, bure);
-		if (!this.level().isClientSide) this.level().addFreshEntity(bullet);
+		bullet.moveTo(this.getX() + xx11, this.getY()+h, this.getZ() + zz11, this.yRot, this.xRot);
+		bullet.shootFromRotation(this, this.xRot, this.yRot, 0.0F, speed, bure);
+		if (!this.level.isClientSide) this.level.addFreshEntity(bullet);
 	}
 	public boolean hide = false;
 	
@@ -329,12 +350,12 @@ public class EntitySA_ConscriptX extends EntitySA_SoldierBase{
 				this.setHealth(this.getHealth()+(this.getMaxHealth()-this.getHealth())*0.02F);
 				living.invulnerableTime = 0;
 				this.doHurtTarget(living);
-				List<Entity> list = this.level().getEntities(this, this.getBoundingBox().inflate(3D, 2.0D, 3D));
+				List<Entity> list = this.level.getEntities(this, this.getBoundingBox().inflate(3D, 2.0D, 3D));
 				for(int k2 = 0; k2 < list.size(); ++k2) {
 					Entity attackentity = list.get(k2);
 					if(this.CanAttack(attackentity)){
-						attackentity.hurt(this.damageSources().thrown(this, this), 5);
-						if(this.getMoveTypeX()==5)((LivingEntity)attackentity).knockback(2F, 1F, 2);
+						attackentity.hurt(DamageSource.thrown(this, this), 5);
+						if(this.getAction()==5)((LivingEntity)attackentity).knockback(2F, 1F, 2);
 					}
 				}
 			}
@@ -343,7 +364,7 @@ public class EntitySA_ConscriptX extends EntitySA_SoldierBase{
 		}
 	}
 	
-	public float getVoicePitch() {
+	protected float getVoicePitch() {
 	  return (this.random.nextFloat() - this.random.nextFloat()) * 0.2F + 0.7F;
 	}
 	
@@ -374,16 +395,16 @@ public class EntitySA_ConscriptX extends EntitySA_SoldierBase{
 	public float movecool = 0;
 	public void tick() {
 		super.tick();
-		if(!this.onGround() && this.getMoveTypeX()==5){
+		if(!this.onGround && this.getAction()==5){
 			double x1 = 0;
 			double z1 = 0;
-			float ff = this.getYRot() * 0.01745329252F;
-			x1 -= Mth.sin(ff -1.57F) * 0.56F;
-			z1 += Mth.cos(ff -1.57F) * 0.56F;
-			x1 -= Mth.sin(ff) * -0.47F;
-			z1 += Mth.cos(ff) * -0.47F;
-			this.level().addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, this.getX() + x1, this.getY() + 2.23F, this.getZ() + z1, 0.0D, 0.0D, 0.0D);
-			this.level().addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, this.getX() - x1, this.getY() + 2.23F, this.getZ() - z1, 0.0D, 0.0D, 0.0D);
+			float ff = this.yRot * 0.01745329252F;
+			x1 -= MathHelper.sin(ff -1.57F) * 0.56F;
+			z1 += MathHelper.cos(ff -1.57F) * 0.56F;
+			x1 -= MathHelper.sin(ff) * -0.47F;
+			z1 += MathHelper.cos(ff) * -0.47F;
+			this.level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, this.getX() + x1, this.getY() + 2.23F, this.getZ() + z1, 0.0D, 0.0D, 0.0D);
+			this.level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, this.getX() - x1, this.getY() + 2.23F, this.getZ() - z1, 0.0D, 0.0D, 0.0D);
 		}
 
 		if(guncyle<50)++guncyle;
@@ -404,7 +425,7 @@ public class EntitySA_ConscriptX extends EntitySA_SoldierBase{
 			}
 		}
 		
-		float moveSpeed = 0.4F;//移速
+		float moveSpeed = 0.40F;//移速
 		if(this.getRemain2()==1){
 			moveSpeed = 0.1F;
 			if(this.getBbHeight()!=0.75F)this.setSize(1.5F, 0.75F);
@@ -437,22 +458,22 @@ public class EntitySA_ConscriptX extends EntitySA_SoldierBase{
 		
 		if(this.getMovePosY()>0 && this.attack_time>11){
 			this.attack_time=0;
-			this.swing(InteractionHand.MAIN_HAND);
+			this.swing(Hand.MAIN_HAND);
 		}
 
-		if(this.getMoveTypeX()==0){
+		if(this.getAction()==0){
 			this.moveway(this, moveSpeed);
 		}else{
 			this.moveway(this, moveSpeed*4);
 		}
 		this.updateSwingTime();
 		ItemStack heldItem = this.getMainHandItem();
-		Level world = this.level();
+		World world = this.level;
 		if(this.getTarget()!=null && this.isAttacking() && this.getVehicle()==null){
 				LivingEntity livingentity = this.getTarget();
 				if(livingentity.isAlive() && livingentity!=null){
 					if(this.movecool>80){
-						this.setMoveTypeX(this.level().random.nextInt(6));
+						this.setAction(this.level.random.nextInt(6));
 						this.movecool = 0;
 					}
 					if(this.attack_time<20)++this.attack_time;
@@ -478,7 +499,7 @@ public class EntitySA_ConscriptX extends EntitySA_SoldierBase{
 						this.guncyle = 0;//
 						this.gun_count1 = 0;
 						++this.countlimit1;
-						if(this.countlimit1>(1+this.level().random.nextInt(8))){
+						if(this.countlimit1>(1+this.level.random.nextInt(8))){
 							this.counter1 = false;
 							this.countlimit1 = 0;
 						}
@@ -489,10 +510,10 @@ public class EntitySA_ConscriptX extends EntitySA_SoldierBase{
 				++this.fire_tick2;
 				++this.fire_tick3;
 			}
-			if(this.level().random.nextInt(6) > 3 && this.find_time > 20){
+			if(this.level.random.nextInt(6) > 3 && this.find_time > 20){
 				this.setRemain2(2);
 				this.find_time = 0;
-			}else if(this.level().random.nextInt(6) < 3 && this.find_time > 20){
+			}else if(this.level.random.nextInt(6) < 3 && this.find_time > 20){
 				this.setRemain2(0);
 				this.find_time = 0;
 			}
@@ -506,7 +527,7 @@ public class EntitySA_ConscriptX extends EntitySA_SoldierBase{
 		{
 			if (entity.getTarget() != null) {
 				{
-				boolean flag = entity.getSensing().hasLineOfSight(entity.getTarget());
+				boolean flag = entity.getSensing().canSee(entity.getTarget());
 				if (!entity.getTarget().isInvisible()) {//target
 					if (flag) {
 						entity.setAttacking(true);
@@ -518,7 +539,7 @@ public class EntitySA_ConscriptX extends EntitySA_SoldierBase{
 						double d7 = entity.getTarget().getZ() - entity.getZ();
 						double d6 = entity.getTarget().getY() - entity.getY();
 						double d1 = entity.getEyeY() - (entity.getTarget().getEyeY());
-						double d3 = (double) Math.sqrt(d5 * d5 + d7 * d7);
+						double d3 = (double) MathHelper.sqrt(d5 * d5 + d7 * d7);
 						float f11 = (float) (-(Math.atan2(d1, d3) * 180.0D / Math.PI));
 						double ddx = Math.abs(d5);
 						double ddz = Math.abs(d7);
@@ -532,10 +553,9 @@ public class EntitySA_ConscriptX extends EntitySA_SoldierBase{
 								if(entity.getMoveType()!=3)MoveS(entity, -moveSpeed, entity.getTarget().getX(), entity.getTarget().getY(), entity.getTarget().getZ(), (LivingEntity)entity.getTarget());
 							}
 						}
-						entity.setYRot(f12);
-						entity.yRotO = entity.getYRot();
-						entity.setYHeadRot(f12);
-						entity.setXRot(-f11);
+						entity.yRotO = entity.yRot = f12;//
+						entity.setYHeadRot(f12);//
+						entity.xRot = -f11 + 0;//
 					}
 				}
 				}
@@ -564,7 +584,7 @@ public class EntitySA_ConscriptX extends EntitySA_SoldierBase{
 	}
 	
 	public void MoveS(EntitySA_ConscriptX entity, double speed, double ex, double ey, double ez, LivingEntity target){
-		if(!entity.level().isClientSide)
+		if(!entity.level.isClientSide)
 		{
 			double d5 = ex - entity.getX();
 			double d7 = ez - entity.getZ();
@@ -576,63 +596,63 @@ public class EntitySA_ConscriptX extends EntitySA_SoldierBase{
 			
 			if(speed>0){
 				if(entity.distanceTo(target)>2){
-					if(entity.getMoveTypeX() == 1 && entity.movecool<15) {
-						mox -= Mth.sin(yaw) * speed * 1;
-						moz += Mth.cos(yaw) * speed * 1;
-					}else if(entity.getMoveTypeX() == 4) {
-						mox -= Mth.sin(yaw) * speed * -2;
-						moz += Mth.cos(yaw) * speed * -2;
+					if(entity.getAction() == 1 && entity.movecool<15) {
+						mox -= MathHelper.sin(yaw) * speed * 1;
+						moz += MathHelper.cos(yaw) * speed * 1;
+					}else if(entity.getAction() == 4) {
+						mox -= MathHelper.sin(yaw) * speed * -2;
+						moz += MathHelper.cos(yaw) * speed * -2;
 						moy = 1.8D;
 						entity.movecool = 0;
-						entity.setMoveTypeX(0);
-					}else if(entity.getMoveTypeX() == 5) {
+						entity.setAction(0);
+					}else if(entity.getAction() == 5) {
 						if(entity.movecool > 5) {
-							mox -= Mth.sin(yaw) * speed * 2;
-							moz += Mth.cos(yaw) * speed * 2;
+							mox -= MathHelper.sin(yaw) * speed * 2;
+							moz += MathHelper.cos(yaw) * speed * 2;
 							if(entity.movecool == 6)moy = 4D;
 						}
 					}
 				}
 			}else{
-				if(entity.getMoveTypeX() == 4) {
-					mox -= Mth.sin(yaw) * speed * 2;
-					moz += Mth.cos(yaw) * speed * 2;
+				if(entity.getAction() == 4) {
+					mox -= MathHelper.sin(yaw) * speed * 2;
+					moz += MathHelper.cos(yaw) * speed * 2;
 					moy = 1.8D;
 					entity.movecool = 0;
-					entity.setMoveTypeX(0);
+					entity.setAction(0);
 				}
 			}
-			if(entity.getMoveTypeX() == 2) {
-				//System.out.println("---"+entity.getMoveTypeX());
-				mox -= Mth.sin(yaw + 1.57F) * speed * 5;
-				moz += Mth.cos(yaw + 1.57F) * speed * 5;
+			if(entity.getAction() == 2) {
+				//System.out.println("---"+entity.getAction());
+				mox -= MathHelper.sin(yaw + 1.57F) * speed * 5;
+				moz += MathHelper.cos(yaw + 1.57F) * speed * 5;
 				moy = 0.6D;
-				int ran = entity.level().random.nextInt(10);
+				int ran = entity.level.random.nextInt(10);
 				if(ran == 0 || ran == 1) {
-					entity.setMoveTypeX(3);
+					entity.setAction(3);
 				}else
 				{
 					entity.movecool = 0;
-					entity.setMoveTypeX(0);
+					entity.setAction(0);
 				}
 			}
-			else if(entity.getMoveTypeX() == 3) {
-				mox -= Mth.sin(yaw - 1.57F) * speed * 5;
-				moz += Mth.cos(yaw - 1.57F) * speed * 5;
+			else if(entity.getAction() == 3) {
+				mox -= MathHelper.sin(yaw - 1.57F) * speed * 5;
+				moz += MathHelper.cos(yaw - 1.57F) * speed * 5;
 				moy = 0.6D;
-				int ran = entity.level().random.nextInt(10);
+				int ran = entity.level.random.nextInt(10);
 				if(ran == 0 || ran == 1) {
-					entity.setMoveTypeX(2);
+					entity.setAction(2);
 				}else{
 					entity.movecool = 0;
-					entity.setMoveTypeX(0);
+					entity.setAction(0);
 				}
 			}
-			if(entity.getMoveTypeX() == 0){
-				mox -= Mth.sin(yaw) * speed * 1;
-				moz += Mth.cos(yaw) * speed * 1;
+			if(entity.getAction() == 0){
+				mox -= MathHelper.sin(yaw) * speed * 1;
+				moz += MathHelper.cos(yaw) * speed * 1;
 			}
-			boolean flag = entity.getSensing().hasLineOfSight(target);
+			boolean flag = entity.getSensing().canSee(target);
 			if(flag){
 				entity.setDeltaMovement(mox, moy, moz);
 			}else{

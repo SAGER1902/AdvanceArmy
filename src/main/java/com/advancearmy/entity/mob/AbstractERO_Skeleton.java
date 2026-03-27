@@ -3,97 +3,108 @@ package advancearmy.entity.mob;
 import java.time.LocalDate;
 import java.time.temporal.ChronoField;
 import javax.annotation.Nullable;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.entity.MobType;
-import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.EntityDimensions;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.SpawnGroupData;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
+import net.minecraft.entity.CreatureAttribute;
+import net.minecraft.entity.CreatureEntity;
+import net.minecraft.entity.EntitySize;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.ILivingEntityData;
+import net.minecraft.entity.IRangedAttackMob;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.Pose;
+import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.ai.attributes.AttributeModifierMap;
+import net.minecraft.entity.ai.attributes.Attributes;
 
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Pose;
-import net.minecraft.world.entity.MobSpawnType;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.entity.ai.goal.HurtByTargetGoal;
+import net.minecraft.entity.ai.goal.LookAtGoal;
+import net.minecraft.entity.ai.goal.LookRandomlyGoal;
+import net.minecraft.entity.ai.goal.MeleeAttackGoal;
+import net.minecraft.entity.ai.goal.NearestAttackableTargetGoal;
 
-import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
-import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
-import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
-import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
-
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.AbstractArrow;
-import net.minecraft.world.entity.projectile.ProjectileUtil;
-import net.minecraft.world.entity.projectile.Arrow;
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.item.ProjectileWeaponItem;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.core.BlockPos;
-import net.minecraft.util.Mth;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.projectile.AbstractArrowEntity;
+import net.minecraft.entity.projectile.ProjectileHelper;
+import net.minecraft.inventory.EquipmentSlotType;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import net.minecraft.item.ShootableItem;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.util.SoundEvent;
+import net.minecraft.util.SoundEvents;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.DifficultyInstance;
-import net.minecraft.world.level.ServerLevelAccessor;
-import net.minecraft.world.level.Level;
+import net.minecraft.world.IServerWorld;
+import net.minecraft.world.World;
 
-import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.world.entity.monster.RangedAttackMob;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.entity.monster.IMob;
+import net.minecraft.entity.MobEntity;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.monster.MonsterEntity;
 import advancearmy.entity.ai.WaterAvoidingRandomWalkingGoalSA;
-//import com.mrcrayfish.guns.item.GunItem;
+import com.mrcrayfish.guns.item.GunItem;
 import wmlib.common.living.ai.LivingSearchTargetGoalSA;
 import advancearmy.AdvanceArmy;
 import net.minecraftforge.fml.ModList;
-import net.minecraftforge.network.PlayMessages;
-import net.minecraftforge.network.NetworkHooks;
+import net.minecraftforge.fml.network.FMLPlayMessages;
+import net.minecraftforge.fml.network.NetworkHooks;
 
-import net.minecraft.util.RandomSource;
-import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.ai.goal.RangedBowAttackGoal;
+import net.minecraft.entity.CreatureEntity;
+import net.minecraft.entity.ai.goal.RangedBowAttackGoal;
 import wmlib.api.ITool;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
+import net.minecraft.potion.EffectInstance;
+import net.minecraft.potion.Effects;
+import net.minecraft.entity.projectile.ArrowEntity;
 
-import advancearmy.util.TargetSelect;
-public abstract class AbstractERO_Skeleton extends Monster implements RangedAttackMob{//, Enemy
-   private final RangedBowAttackGoal<AbstractERO_Skeleton> bowGoal = new RangedBowAttackGoal<>(this, 1.0D, 20, 15.0F);
+public abstract class AbstractERO_Skeleton extends MonsterEntity implements IRangedAttackMob{//, IMob
+   private final RangedBowAttackGoal<AbstractERO_Skeleton> bowGoal = new RangedBowAttackGoal<>(this, 1.0D, 20, 25.0F);
    private final MeleeAttackGoal meleeGoal = new MeleeAttackGoal(this, 1.2D, false) {
       public void stop() {
          super.stop();
          AbstractERO_Skeleton.this.setAggressive(false);
       }
+
       public void start() {
          super.start();
          AbstractERO_Skeleton.this.setAggressive(true);
       }
    };
+
+	public AbstractERO_Skeleton(FMLPlayMessages.SpawnEntity packet, World worldIn) {
+		super(AdvanceArmy.ENTITY_SKELETON, worldIn);
+	}
    
-   protected AbstractERO_Skeleton(EntityType<? extends AbstractERO_Skeleton> p_i48555_1_, Level p_i48555_2_) {
+   protected AbstractERO_Skeleton(EntityType<? extends AbstractERO_Skeleton> p_i48555_1_, World p_i48555_2_) {
       super(p_i48555_1_, p_i48555_2_);
       this.reassessWeaponGoal();
    }
 
    protected void registerGoals() {
 		this.goalSelector.addGoal(5, new WaterAvoidingRandomWalkingGoalSA(this, 1.0D));
-		this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 8.0F));
-		this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
+		this.goalSelector.addGoal(6, new LookAtGoal(this, PlayerEntity.class, 8.0F));
+		this.goalSelector.addGoal(6, new LookRandomlyGoal(this));
 		this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
-		this.targetSelector.addGoal(1, new LivingSearchTargetGoalSA<>(this, Mob.class, 10, 15F, false, false, (attackentity) -> {
+		this.targetSelector.addGoal(1, new LivingSearchTargetGoalSA<>(this, MobEntity.class, 10, 15F, false, false, (attackentity) -> {
 			return this.CanAttack(attackentity);
 		}));
-		this.targetSelector.addGoal(2, new LivingSearchTargetGoalSA<>(this, Player.class, 10, 15F, false, false, (attackentity) -> {
+		this.targetSelector.addGoal(2, new LivingSearchTargetGoalSA<>(this, PlayerEntity.class, 10, 15F, false, false, (attackentity) -> {
 			return true;
 		}));
    }
 
     public boolean CanAttack(Entity entity){
-		return TargetSelect.mobCanAttack(this,entity,this.getTarget());
+		if(entity instanceof LivingEntity && ((LivingEntity) entity).getHealth() > 0.0F){
+			if(!(entity instanceof IMob)&&!(entity instanceof ITool)||entity==this.getTarget()){
+				return true;
+			}else{
+				return false;
+			}
+    	}else{
+			return false;
+		}
     }
 
    protected void playStepSound(BlockPos p_180429_1_, BlockState p_180429_2_) {
@@ -102,8 +113,8 @@ public abstract class AbstractERO_Skeleton extends Monster implements RangedAtta
 
    protected abstract SoundEvent getStepSound();
 
-   public MobType getMobType() {
-      return MobType.UNDEAD;
+   public CreatureAttribute getMobType() {
+      return CreatureAttribute.UNDEAD;
    }
 	public int cooltime;
    public void aiStep() {
@@ -111,13 +122,13 @@ public abstract class AbstractERO_Skeleton extends Monster implements RangedAtta
 	   if(!this.sneak_aim && this.isCrouching())this.setPose(Pose.STANDING);*/
       /*boolean flag = this.isSunBurnTick();
       if (flag) {
-         ItemStack itemstack = this.getItemBySlot(EquipmentSlot.HEAD);
+         ItemStack itemstack = this.getItemBySlot(EquipmentSlotType.HEAD);
          if (!itemstack.isEmpty()) {
             if (itemstack.isDamageableItem()) {
                itemstack.setDamageValue(itemstack.getDamageValue() + this.random.nextInt(2));
                if (itemstack.getDamageValue() >= itemstack.getMaxDamage()) {
-                  this.broadcastBreakEvent(EquipmentSlot.HEAD);
-                  this.setItemSlot(EquipmentSlot.HEAD, ItemStack.EMPTY);
+                  this.broadcastBreakEvent(EquipmentSlotType.HEAD);
+                  this.setItemSlot(EquipmentSlotType.HEAD, ItemStack.EMPTY);
                }
             }
 
@@ -133,98 +144,104 @@ public abstract class AbstractERO_Skeleton extends Monster implements RangedAtta
 
    public void rideTick() {
       super.rideTick();
-      if (this.getVehicle() instanceof PathfinderMob) {
-         PathfinderMob creatureentity = (PathfinderMob)this.getVehicle();
+      if (this.getVehicle() instanceof CreatureEntity) {
+         CreatureEntity creatureentity = (CreatureEntity)this.getVehicle();
          this.yBodyRot = creatureentity.yBodyRot;
       }
    }
 
+   protected void populateDefaultEquipmentSlots(DifficultyInstance p_180481_1_) {
+      super.populateDefaultEquipmentSlots(p_180481_1_);
+      this.setItemSlot(EquipmentSlotType.MAINHAND, new ItemStack(Items.BOW));
+	  this.setItemSlot(EquipmentSlotType.OFFHAND, new ItemStack(Items.BOW));
+   }
 
-    @Override
-    protected void populateDefaultEquipmentSlots(RandomSource $$0, DifficultyInstance $$1) {
-        super.populateDefaultEquipmentSlots($$0, $$1);
-        this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
-    }
+   @Nullable
+   public ILivingEntityData finalizeSpawn(IServerWorld p_213386_1_, DifficultyInstance p_213386_2_, SpawnReason p_213386_3_, @Nullable ILivingEntityData p_213386_4_, @Nullable CompoundNBT p_213386_5_) {
+      p_213386_4_ = super.finalizeSpawn(p_213386_1_, p_213386_2_, p_213386_3_, p_213386_4_, p_213386_5_);
+      this.populateDefaultEquipmentSlots(p_213386_2_);
+      this.populateDefaultEquipmentEnchantments(p_213386_2_);
+      this.reassessWeaponGoal();
+      this.setCanPickUpLoot(this.random.nextFloat() < 0.55F * p_213386_2_.getSpecialMultiplier());
+      if (this.getItemBySlot(EquipmentSlotType.HEAD).isEmpty()) {
+         LocalDate localdate = LocalDate.now();
+         int i = localdate.get(ChronoField.DAY_OF_MONTH);
+         int j = localdate.get(ChronoField.MONTH_OF_YEAR);
+         if (j == 10 && i == 31 && this.random.nextFloat() < 0.25F) {
+            this.setItemSlot(EquipmentSlotType.HEAD, new ItemStack(this.random.nextFloat() < 0.1F ? Blocks.JACK_O_LANTERN : Blocks.CARVED_PUMPKIN));
+            this.armorDropChances[EquipmentSlotType.HEAD.getIndex()] = 0.0F;
+         }
+      }
 
-	@Override
-    @Nullable
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason, @Nullable SpawnGroupData spawnData, @Nullable CompoundTag dataTag) {
-        spawnData = super.finalizeSpawn(level, difficulty, reason, spawnData, dataTag);
-        RandomSource $$5 = level.getRandom();
-        this.populateDefaultEquipmentSlots($$5, difficulty);
-        this.populateDefaultEquipmentEnchantments($$5, difficulty);
-        this.reassessWeaponGoal();
-        this.setCanPickUpLoot($$5.nextFloat() < 0.55f * difficulty.getSpecialMultiplier());
-        if (this.getItemBySlot(EquipmentSlot.HEAD).isEmpty()) {
-            LocalDate $$6 = LocalDate.now();
-            int $$7 = $$6.get(ChronoField.DAY_OF_MONTH);
-            int $$8 = $$6.get(ChronoField.MONTH_OF_YEAR);
-            if ($$8 == 10 && $$7 == 31 && $$5.nextFloat() < 0.25f) {
-                this.setItemSlot(EquipmentSlot.HEAD, new ItemStack($$5.nextFloat() < 0.1f ? Blocks.JACK_O_LANTERN : Blocks.CARVED_PUMPKIN));
-                this.armorDropChances[EquipmentSlot.HEAD.getIndex()] = 0.0f;
+      return p_213386_4_;
+   }
+
+   public void reassessWeaponGoal() {
+      if (this.level != null && !this.level.isClientSide) {
+         this.goalSelector.removeGoal(this.meleeGoal);
+         this.goalSelector.removeGoal(this.bowGoal);
+         ItemStack itemstack = this.getItemInHand(ProjectileHelper.getWeaponHoldingHand(this, item -> item instanceof net.minecraft.item.BowItem));
+		 ItemStack this_heldItem = this.getMainHandItem();
+         if (itemstack.getItem() == Items.BOW) {
+            int i = 20;
+            if (this.level.getDifficulty() != Difficulty.HARD) {
+               i = 40;
             }
-        }
-        return spawnData;
-    }
-
-    public void reassessWeaponGoal() {
-        if (this.level() == null || this.level().isClientSide) {
-            return;
-        }
-        this.goalSelector.removeGoal(this.meleeGoal);
-        this.goalSelector.removeGoal(this.bowGoal);
-        ItemStack $$0 = this.getItemInHand(ProjectileUtil.getWeaponHoldingHand(this, Items.BOW));
-        if ($$0.is(Items.BOW)) {
-            int $$1 = 20;
-            if (this.level().getDifficulty() != Difficulty.HARD) {
-                $$1 = 40;
-            }
-            this.bowGoal.setMinAttackInterval($$1);
+            this.bowGoal.setMinAttackInterval(i);
             this.goalSelector.addGoal(4, this.bowGoal);
-        } else {
-            this.goalSelector.addGoal(4, this.meleeGoal);
-        }
-    }
+         } else {
+			/*if(this_heldItem.getItem() instanceof GunItem){
+				int i = 20;
+				this.bowGoal.setMinAttackInterval(i);
+				this.goalSelector.addGoal(4, this.bowGoal);
+			}else*/{
+				this.goalSelector.addGoal(4, this.meleeGoal);
+			}
+         }
+      }
+   }
 
-    @Override
-    public void performRangedAttack(LivingEntity target, float velocity) {
-        ItemStack $$2 = this.getProjectile(this.getItemInHand(ProjectileUtil.getWeaponHoldingHand(this, Items.BOW)));
-        AbstractArrow $$3 = this.getArrow($$2, velocity);
-        double $$4 = target.getX() - this.getX();
-        double $$5 = target.getY(0.3333333333333333) - $$3.getY();
-        double $$6 = target.getZ() - this.getZ();
-        double $$7 = Math.sqrt($$4 * $$4 + $$6 * $$6);
-        $$3.shoot($$4, $$5 + $$7 * (double)0.2f, $$6, 1.6f, 14 - this.level().getDifficulty().getId() * 4);
-        this.playSound(SoundEvents.SKELETON_SHOOT, 1.0f, 1.0f / (this.getRandom().nextFloat() * 0.4f + 0.8f));
-        this.level().addFreshEntity($$3);
-    }
+   public void performRangedAttack(LivingEntity p_82196_1_, float p_82196_2_) {
+      ItemStack itemstack = this.getProjectile(this.getItemInHand(ProjectileHelper.getWeaponHoldingHand(this, item -> item instanceof net.minecraft.item.BowItem)));
+      AbstractArrowEntity abstractarrowentity = this.getArrow(itemstack, p_82196_2_);
+      if (this.getMainHandItem().getItem() instanceof net.minecraft.item.BowItem)
+         abstractarrowentity = ((net.minecraft.item.BowItem)this.getMainHandItem().getItem()).customArrow(abstractarrowentity);
+      double d0 = p_82196_1_.getX() - this.getX();
+      double d1 = p_82196_1_.getY(0.3333333333333333D) - abstractarrowentity.getY();
+      double d2 = p_82196_1_.getZ() - this.getZ();
+      double d3 = (double)MathHelper.sqrt(d0 * d0 + d2 * d2);
+      abstractarrowentity.shoot(d0, d1 + d3 * (double)0.2F, d2, 2.0F, 10F);
+	  abstractarrowentity.setCritArrow(true);
+      this.playSound(SoundEvents.SKELETON_SHOOT, 1.0F, 1.0F / (this.getRandom().nextFloat() * 0.4F + 0.8F));
+      this.level.addFreshEntity(abstractarrowentity);
+   }
 
-    protected AbstractArrow getArrow(ItemStack arrowStack, float velocity) {
-        AbstractArrow $$2 = ProjectileUtil.getMobArrow(this, arrowStack, velocity);
-        if ($$2 instanceof Arrow) {
-            ((Arrow)$$2).addEffect(new MobEffectInstance(MobEffects.WITHER, 300));
-        }
-        return $$2;
-    }
-    @Override
-    public boolean canFireProjectileWeapon(ProjectileWeaponItem projectileWeapon) {
-        return projectileWeapon == Items.BOW;
-    }
+   protected AbstractArrowEntity getArrow(ItemStack p_213624_1_, float p_213624_2_) {
+      AbstractArrowEntity abstractarrowentity = ProjectileHelper.getMobArrow(this, p_213624_1_, p_213624_2_);
+      if (abstractarrowentity instanceof ArrowEntity) {
+         ((ArrowEntity)abstractarrowentity).addEffect(new EffectInstance(Effects.WITHER, 300));
+      }
+      return abstractarrowentity;
+   }
 
-   public void readAdditionalSaveData(CompoundTag p_70037_1_) {
+   public boolean canFireProjectileWeapon(ShootableItem p_230280_1_) {
+      return p_230280_1_ == Items.BOW;
+   }
+
+   public void readAdditionalSaveData(CompoundNBT p_70037_1_) {
       super.readAdditionalSaveData(p_70037_1_);
       this.reassessWeaponGoal();
    }
 
-   public void setItemSlot(EquipmentSlot p_184201_1_, ItemStack p_184201_2_) {
+   public void setItemSlot(EquipmentSlotType p_184201_1_, ItemStack p_184201_2_) {
       super.setItemSlot(p_184201_1_, p_184201_2_);
-      if (!this.level().isClientSide) {
+      if (!this.level.isClientSide) {
          this.reassessWeaponGoal();
       }
 
    }
 
-   protected float getStandingEyeHeight(Pose p_213348_1_, EntityDimensions p_213348_2_) {
+   protected float getStandingEyeHeight(Pose p_213348_1_, EntitySize p_213348_2_) {
       return 1.74F;
    }
 

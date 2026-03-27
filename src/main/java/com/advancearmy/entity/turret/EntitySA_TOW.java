@@ -1,29 +1,28 @@
 package advancearmy.entity.turret;
 import net.minecraftforge.fml.ModList;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import advancearmy.init.ModEntities;
-import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.network.PlayMessages;
+import net.minecraft.world.World;
+import net.minecraft.entity.ai.attributes.AttributeModifierMap;
+import net.minecraft.entity.ai.attributes.Attributes;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.EntityType;
+import net.minecraftforge.fml.network.FMLPlayMessages;
 import wmlib.common.living.WeaponVehicleBase;
 import advancearmy.entity.ai.AI_EntityWeapon;
 import advancearmy.AdvanceArmy;
 import advancearmy.event.SASoundEvent;
 import safx.SagerFX;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.ResourceLocation;
 import wmlib.client.obj.SAObjModel;
 import advancearmy.entity.EntitySA_TurretBase;
-import net.minecraft.util.Mth;
+import net.minecraft.util.math.MathHelper;
 import advancearmy.entity.EntitySA_SoldierBase;
 import advancearmy.entity.EntitySA_Seat;
 import wmlib.common.bullet.EntityMissile;
 import java.util.List;
-import net.minecraft.world.entity.Entity;
+import net.minecraft.entity.Entity;
 public class EntitySA_TOW extends EntitySA_TurretBase{
-	public EntitySA_TOW(EntityType<? extends EntitySA_TOW> sodier, Level worldIn) {
+	public EntitySA_TOW(EntityType<? extends EntitySA_TOW> sodier, World worldIn) {
 		super(sodier, worldIn);
 		seatPosX[0] = 0.5F;
 		seatPosY[0] = 0;
@@ -60,13 +59,13 @@ public class EntitySA_TOW extends EntitySA_TurretBase{
 		this.fireposX1 = 0;
 		this.fireposY1 = 1.25F;
 		this.fireposZ1 = 0.98F;
-		this.firebaseY = 0;
+		this.firebaseX = 0;
 		this.firebaseZ = 0F;
 		this.w1barrelsize = 0.2F;
 		this.obj = new SAObjModel("advancearmy:textures/mob/tow.obj");
-		this.tex = ResourceLocation.tryParse("advancearmy:textures/mob/tow.png");
-		this.icon1tex = ResourceLocation.tryParse("advancearmy:textures/hud/towhead.png");
-		this.icon2tex = ResourceLocation.tryParse("advancearmy:textures/hud/towbody.png");
+		this.tex = new ResourceLocation("advancearmy:textures/mob/tow.png");
+		this.icon1tex = new ResourceLocation("advancearmy:textures/hud/towhead.png");
+		this.icon2tex = new ResourceLocation("advancearmy:textures/hud/towbody.png");
 		this.magazine = 1;
 		this.reload_time1 = 95;
 		this.reloadSound1 = SASoundEvent.reload_missile.get();
@@ -76,15 +75,15 @@ public class EntitySA_TOW extends EntitySA_TurretBase{
 		this.w1icon="wmlib:textures/hud/rocket152mm.png";
 	}
 
-	public EntitySA_TOW(PlayMessages.SpawnEntity packet, Level worldIn) {//
-		super(ModEntities.ENTITY_TOW.get(), worldIn);
+	public EntitySA_TOW(FMLPlayMessages.SpawnEntity packet, World worldIn) {//
+		super(AdvanceArmy.ENTITY_MORTAR, worldIn);
 	}
 	
 	public void tick() {
 		super.tick();
 		if(this.getTargetType()==0 && this.getOwner()!=null){
 			boolean have = false;
-			List<Entity> list = this.level().getEntities(this, this.getBoundingBox().inflate(100D, 100D, 100D));
+			List<Entity> list = this.level.getEntities(this, this.getBoundingBox().inflate(100D, 100D, 100D));
 			for(int k2 = 0; k2 < list.size(); ++k2) {
 				Entity ent = list.get(k2);
 				if(ent instanceof EntityMissile){
@@ -106,9 +105,9 @@ public class EntitySA_TOW extends EntitySA_TurretBase{
 		String tex = "advancearmy:textures/entity/bullet/rocket152mm.png";
 		String fx1 = "SmokeGun";
 		LivingEntity shooter = this;
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
 		AI_EntityWeapon.Attacktask(this, shooter, this.getTarget(), 4, model, tex, fx1, "SAMissileTrail", firesound1,
-		1F, this.fireposX1,this.fireposY1,this.fireposZ1,this.firebaseY,this.firebaseZ,
+		1F, this.fireposX1,this.fireposY1,this.fireposZ1,this.firebaseX,this.firebaseZ,
 		this.getX(), this.getY(), this.getZ(),this.turretYaw, this.turretPitch,
 		150, 3, 1F, 2, false, 1, 0.01F, 100, 6);
 	}

@@ -1,26 +1,25 @@
 package advancearmy.entity.air;
-import advancearmy.init.ModEntities;
+
 import net.minecraftforge.fml.ModList;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.network.PlayMessages;
+import net.minecraft.world.World;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.EntityType;
+import net.minecraftforge.fml.network.FMLPlayMessages;
 import wmlib.common.living.WeaponVehicleBase;
 import advancearmy.entity.ai.AI_EntityWeapon;
 import advancearmy.AdvanceArmy;
 import advancearmy.event.SASoundEvent;
 import safx.SagerFX;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.ResourceLocation;
 import wmlib.client.obj.SAObjModel;
 import advancearmy.entity.EntitySA_HeliBase;
-import net.minecraft.util.Mth;
+import net.minecraft.util.math.MathHelper;
 import advancearmy.entity.EntitySA_Seat;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.entity.player.PlayerEntity;
+
 public class EntitySA_Yw010 extends EntitySA_HeliBase{
-	public EntitySA_Yw010(EntityType<? extends EntitySA_Yw010> sodier, Level worldIn) {
+	public EntitySA_Yw010(EntityType<? extends EntitySA_Yw010> sodier, World worldIn) {
 		super(sodier, worldIn);
 		seatTurret[1] = false;
 		VehicleType = 3;
@@ -28,7 +27,7 @@ public class EntitySA_Yw010 extends EntitySA_HeliBase{
 		this.renderHudOverlay = false;
 		this.renderHudOverlayZoom = false;
 		this.icon1tex = null;
-		this.icon2tex = ResourceLocation.tryParse("advancearmy:textures/hud/yw010icon.png");
+		this.icon2tex = new ResourceLocation("advancearmy:textures/hud/yw010icon.png");
 		this.seatView1X = 0F;
 		this.seatView1Y = 0F;
 		this.seatView1Z = 0.01F;
@@ -106,14 +105,9 @@ public class EntitySA_Yw010 extends EntitySA_HeliBase{
 		this.w3icon="advancearmy:textures/hud/dun2.png";
 		this.w4icon="wmlib:textures/hud/repair.png";
 	}
-	public EntitySA_Yw010(PlayMessages.SpawnEntity packet, Level worldIn) {
-		super(ModEntities.ENTITY_YW010.get(), worldIn);
+	public EntitySA_Yw010(FMLPlayMessages.SpawnEntity packet, World worldIn) {
+		super(AdvanceArmy.ENTITY_YW010, worldIn);
 	}
-	
-	public static AttributeSupplier.Builder createAttributes() {
-        return EntitySA_Yw010.createMobAttributes();
-    }
-	
 	public void tick() {
 		super.tick();
 		if(this.getHealth()>0){
@@ -125,8 +119,8 @@ public class EntitySA_Yw010 extends EntitySA_HeliBase{
 				seat.gunner_aim=true;
 
 				this.seatWeapon1(seat);
-				this.turretYaw1=seat.getYHeadRot();
-				this.turretPitch1=seat.turretPitch;
+				this.turretYaw_1=seat.getYHeadRot();
+				this.turretPitch_1=seat.turretPitch;
 				if(seat.getRemain1()>0){
 					if(seat.fire1)this.setAnimFire(2);
 				}
@@ -139,8 +133,8 @@ public class EntitySA_Yw010 extends EntitySA_HeliBase{
 				seat.gunner_aim=true;
 
 				this.seatWeapon1(seat);
-				this.turretYaw2=seat.getYHeadRot();
-				this.turretPitch2=seat.turretPitch;
+				this.turretYaw_2=seat.getYHeadRot();
+				this.turretPitch_2=seat.turretPitch;
 				if(seat.getRemain1()>0){
 					if(seat.fire1)this.setAnimFire(3);
 				}
@@ -159,7 +153,7 @@ public class EntitySA_Yw010 extends EntitySA_HeliBase{
 		String fx1 = "SmokeGun";
 		String fx2 = "YellowBulletTrail";
 		LivingEntity shooter = this;
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
 		AI_EntityWeapon.Attacktask(this, shooter, this.getTarget(), 3, model, tex, fx1, fx2, firesound1,
 		1F, fireX,this.fireposY1,this.fireposZ1,this.firebaseX,this.firebaseZ,
 		this.getX(), this.getY(), this.getZ(),this.turretYaw, this.turretPitch,
@@ -186,6 +180,6 @@ public class EntitySA_Yw010 extends EntitySA_HeliBase{
 		String fx1 = "SmokeGun";
 		String fx2 = "YellowBulletTrail";
 		seat.setWeapon(0, 0, model, tex, fx1, fx2, SASoundEvent.gun4.get(), 0,1F,2.5F,0,0.2F,
-		10, 4F, 1.25F, 1, false, 1, 0.01F, 20, 0);
+		10, 6F, 1.25F, 1, false, 1, 0.01F, 20, 0);
 	}
 }

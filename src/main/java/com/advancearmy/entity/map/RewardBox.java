@@ -7,59 +7,96 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.function.Predicate;
 import javax.annotation.Nullable;
-import net.minecraft.world.Difficulty;
-import net.minecraft.world.level.Level;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageTypes;
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.scores.Team;
-import net.minecraft.network.syncher.EntityDataAccessor;  
-import net.minecraft.network.syncher.EntityDataSerializers;
-import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtUtils;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.MoverType;
-import net.minecraft.world.entity.EntityDimensions;
-import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.network.PlayMessages;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.TamableAnimal;
-import net.minecraft.world.entity.AgeableMob;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Item;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.item.Items;
-import net.minecraft.network.chat.Component;
-import net.minecraft.world.entity.Entity.RemovalReason;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
+import net.minecraft.entity.CreatureAttribute;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntitySize;
+import net.minecraft.entity.EntitySpawnPlacementRegistry;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.ILivingEntityData;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.Pose;
+import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.ai.attributes.AttributeModifier;
+import net.minecraft.entity.ai.attributes.AttributeModifierMap;
+import net.minecraft.entity.ai.attributes.Attributes;
+import net.minecraft.entity.ai.attributes.ModifiableAttributeInstance;
 
-import net.minecraft.server.level.ServerPlayer;
-import advancearmy.event.SASoundEvent;
-import advancearmy.item.ItemSpawn;
+import net.minecraft.entity.merchant.villager.AbstractVillagerEntity;
+import net.minecraft.entity.merchant.villager.VillagerEntity;
+import net.minecraft.entity.passive.ChickenEntity;
+import net.minecraft.entity.passive.IronGolemEntity;
+import net.minecraft.entity.passive.TurtleEntity;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.inventory.EquipmentSlotType;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.NBTDynamicOps;
+import net.minecraft.network.datasync.DataParameter;
+import net.minecraft.network.datasync.DataSerializers;
+import net.minecraft.network.datasync.EntityDataManager;
+import net.minecraft.pathfinding.GroundPathNavigator;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.util.DamageSource;
+import net.minecraft.util.EntityPredicates;
+import net.minecraft.util.GroundPathHelper;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.SoundEvent;
+import net.minecraft.util.SoundEvents;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.world.Difficulty;
+import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.GameRules;
+import net.minecraft.world.IServerWorld;
+import net.minecraft.world.IWorld;
+import net.minecraft.world.World;
+import net.minecraft.world.server.ServerWorld;
+import net.minecraft.world.spawner.WorldEntitySpawner;
+import net.minecraft.entity.monster.IMob;
+import net.minecraft.entity.MobEntity;
 import advancearmy.AdvanceArmy;
-import advancearmy.init.ModEntities;
-import advancearmy.init.ModItems;
-import wmlib.api.IHealthBar;
-import wmlib.api.IBuilding;
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.Style;
+import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.ActionResultType;
+import net.minecraft.util.Hand;
+import net.minecraft.item.Item;
+
+import net.minecraftforge.fml.network.FMLPlayMessages;
+import net.minecraftforge.fml.network.NetworkHooks;
+
+import net.minecraft.entity.CreatureEntity;
+
+import net.minecraft.world.server.ServerBossInfo;
+import net.minecraft.world.BossInfo;
+
 import wmlib.api.IEnemy;
+import net.minecraft.entity.player.ServerPlayerEntity;
+import wmlib.common.living.WeaponVehicleBase;
+
+import advancearmy.entity.air.EntitySA_Plane1;
+import advancearmy.entity.air.EntitySA_Plane2;
+
+import advancearmy.entity.soldier.EntitySA_Soldier;
+import advancearmy.entity.soldier.EntitySA_Conscript;
+import advancearmy.entity.soldier.EntitySA_GI;
+
+import advancearmy.entity.EntitySA_SoldierBase;
+import advancearmy.entity.sea.EntitySA_BattleShip;
+import advancearmy.entity.land.EntitySA_FTK_H;
+import advancearmy.entity.air.EntitySA_Fw020;
+import advancearmy.entity.land.EntitySA_Ember;
+import advancearmy.entity.air.EntitySA_YouHun;
+import advancearmy.entity.air.EntitySA_Yw010;
+import advancearmy.entity.air.EntitySA_F35;
+import advancearmy.entity.air.EntitySA_A10a;
+import net.minecraft.entity.passive.TameableEntity;
+import wmlib.common.living.EntityWMVehicleBase;
+import net.minecraft.entity.AgeableEntity;
 import wmlib.api.ITool;
 import wmlib.common.bullet.EntityMissile;
 import wmlib.common.bullet.EntityShell;
@@ -67,29 +104,26 @@ import advancearmy.entity.soldier.EntitySA_Swun;
 
 import advancearmy.AdvanceArmy;
 import wmlib.common.block.BlockRegister;
-import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
+import net.minecraft.network.play.server.SDestroyEntitiesPacket;
 import advancearmy.event.SASoundEvent;
-public class RewardBox extends Mob implements ITool{
-	public RewardBox(EntityType<? extends RewardBox> p_i48549_1_, Level p_i48549_2_) {
+import net.minecraft.entity.item.ItemEntity;
+public class RewardBox extends MobEntity implements ITool{
+	public RewardBox(EntityType<? extends RewardBox> p_i48549_1_, World p_i48549_2_) {
 	  super(p_i48549_1_, p_i48549_2_);
 	  this.noCulling = true;
 	}
-	public RewardBox(PlayMessages.SpawnEntity packet, Level worldIn) {
-		super(ModEntities.ENTITY_RBOX.get(), worldIn);
+	public RewardBox(FMLPlayMessages.SpawnEntity packet, World worldIn) {
+		super(AdvanceArmy.ENTITY_RBOX, worldIn);
 	}
-	public static AttributeSupplier.Builder createAttributes() {
-        return RewardBox.createMobAttributes();
-    }
-	
 	public void checkDespawn() {
 	}
-	private static final EntityDataAccessor<Integer> BoxID = SynchedEntityData.<Integer>defineId(RewardBox.class, EntityDataSerializers.INT);
-	public void addAdditionalSaveData(CompoundTag compound)
+	private static final DataParameter<Integer> BoxID = EntityDataManager.<Integer>defineId(RewardBox.class, DataSerializers.INT);
+	public void addAdditionalSaveData(CompoundNBT compound)
 	{
 		super.addAdditionalSaveData(compound);
 		compound.putInt("BoxID", this.getBoxID());
 	}
-	public void readAdditionalSaveData(CompoundTag compound)
+	public void readAdditionalSaveData(CompoundNBT compound)
 	{
 	   super.readAdditionalSaveData(compound);
 	   this.setBoxID(compound.getInt("BoxID"));
@@ -110,122 +144,122 @@ public class RewardBox extends Mob implements ITool{
 		return false;
 	}*/
 	
-	int iron = 1;
-	int gold = 1;
-	int emerald = 1;
-	int diamond = 1;
-	int goldmelon = 1;
-	int ironmelon = 1;
+	int iron = 0;
+	int gold = 0;
+	int emerald = 0;
+	int diamond = 0;
+	int goldmelon = 0;
+	int ironmelon = 0;
 	
-	public InteractionResult mobInteract(Player player, InteractionHand hand) {
+	public ActionResultType mobInteract(PlayerEntity player, Hand hand) {
 		player.playSound(SASoundEvent.open_box.get(),1F,1F);
-		if(!this.level().isClientSide){
-			this.discard();
-			if (player instanceof ServerPlayer) {
-                ((ServerPlayer) player).connection.send(new ClientboundRemoveEntitiesPacket(this.getId()));
+		if(!level.isClientSide){
+			this.remove();
+			if (player instanceof ServerPlayerEntity) {
+                ((ServerPlayerEntity) player).connection.send(new SDestroyEntitiesPacket(this.getId()));
             }
 			//this.die(DamageSource.GENERIC);
-			return InteractionResult.SUCCESS;
+			return ActionResultType.SUCCESS;
 		}
-		return InteractionResult.PASS;
+		return ActionResultType.PASS;
     }
 	
-   public void remove(RemovalReason r) {
-      super.remove(r);
+   public void remove() {
+      super.remove();
 		if(this.getBoxID()==1){//mob
-			this.dropItemStack(new ItemStack(ModItems.item_spawn_m2hb.get()));
-			this.dropItemStack(new ItemStack(ModItems.item_spawn_tow.get()));
-			this.dropItemStack(new ItemStack(ModItems.item_spawn_stin.get()));
+			this.dropItemStack(new ItemStack(AdvanceArmy.item_spawn_m2hb));
+			this.dropItemStack(new ItemStack(AdvanceArmy.item_spawn_tow));
+			this.dropItemStack(new ItemStack(AdvanceArmy.item_spawn_stin));
 			iron = 10;
 			gold = 10;
 			emerald = 3;
 			goldmelon = 1;
 			ironmelon = 2;
-			this.dropItemStack(new ItemStack(ModItems.challenge_reb.get()));
+			this.dropItemStack(new ItemStack(AdvanceArmy.challenge_reb));
 		}else if(this.getBoxID()==2){//reb
-			this.dropItemStack(new ItemStack(ModItems.item_spawn_tank.get()));
-			this.dropItemStack(new ItemStack(ModItems.item_spawn_m2a2.get()));
-			this.dropItemStack(new ItemStack(ModItems.item_spawn_egal.get()));
-			this.dropItemStack(new ItemStack(ModItems.support_155.get()));
-			this.dropItemStack(new ItemStack(ModItems.item_spawn_mortar.get()));
+			this.dropItemStack(new ItemStack(AdvanceArmy.item_spawn_tank));
+			this.dropItemStack(new ItemStack(AdvanceArmy.item_spawn_m2a2));
+			this.dropItemStack(new ItemStack(AdvanceArmy.item_spawn_egal));
+			this.dropItemStack(new ItemStack(AdvanceArmy.support_155));
+			this.dropItemStack(new ItemStack(AdvanceArmy.item_spawn_mortar));
 			iron = 15;
 			gold = 20;
 			emerald = 8;
 			diamond = 3;
 			goldmelon = 3;
 			ironmelon = 4;
-			this.dropItemStack(new ItemStack(ModItems.challenge_pillager.get()));
+			this.dropItemStack(new ItemStack(AdvanceArmy.challenge_pillager));
 		}else if(this.getBoxID()==3){//pill
-			this.dropItemStack(new ItemStack(ModItems.item_spawn_t90.get()));
-			this.dropItemStack(new ItemStack(ModItems.item_spawn_bmpt.get()));
-			this.dropItemStack(new ItemStack(ModItems.item_spawn_heli.get()));
-			this.dropItemStack(new ItemStack(ModItems.support_kh29l.get()));
-			this.dropItemStack(new ItemStack(ModItems.support_a10a.get()));
+			this.dropItemStack(new ItemStack(AdvanceArmy.item_spawn_t90));
+			this.dropItemStack(new ItemStack(AdvanceArmy.item_spawn_bmpt));
+			this.dropItemStack(new ItemStack(AdvanceArmy.item_spawn_heli));
+			this.dropItemStack(new ItemStack(AdvanceArmy.support_kh29l));
+			this.dropItemStack(new ItemStack(AdvanceArmy.support_a10a));
 			iron = 20;
 			gold = 30;
 			emerald = 12;
 			diamond = 8;
 			goldmelon = 4;
 			ironmelon = 5;
-			this.dropItemStack(new ItemStack(ModItems.challenge_tank.get()));
+			this.dropItemStack(new ItemStack(AdvanceArmy.challenge_tank));
 		}else if(this.getBoxID()==4){//tank
-			this.dropItemStack(new ItemStack(ModItems.item_spawn_a10a.get()));
-			this.dropItemStack(new ItemStack(ModItems.item_spawn_m6aa.get()));
-			this.dropItemStack(new ItemStack(ModItems.item_spawn_gltk.get()));
+			this.dropItemStack(new ItemStack(AdvanceArmy.item_spawn_a10a));
+			this.dropItemStack(new ItemStack(AdvanceArmy.item_spawn_m6aa));
+			this.dropItemStack(new ItemStack(AdvanceArmy.item_spawn_gltk));
 			iron = 30;
 			gold = 40;
 			emerald = 16;
 			diamond = 12;
 			goldmelon = 5;
 			ironmelon = 6;
-			this.dropItemStack(new ItemStack(ModItems.challenge_mobair.get()));
+			this.dropItemStack(new ItemStack(AdvanceArmy.challenge_mobair));
 		}else if(this.getBoxID()==5){//mobair
-			this.dropItemStack(new ItemStack(ModItems.item_spawn_su33.get()));
-			this.dropItemStack(new ItemStack(ModItems.item_spawn_mi24.get()));
+			this.dropItemStack(new ItemStack(AdvanceArmy.item_spawn_su33));
+			this.dropItemStack(new ItemStack(AdvanceArmy.item_spawn_mi24));
 			iron = 35;
 			gold = 45;
 			emerald = 18;
 			diamond = 15;
 			goldmelon = 6;
 			ironmelon = 7;
-			this.dropItemStack(new ItemStack(ModItems.challenge_air.get()));
+			this.dropItemStack(new ItemStack(AdvanceArmy.challenge_air));
 		}else if(this.getBoxID()==6){//air
-			this.dropItemStack(new ItemStack(ModItems.item_spawn_f35.get()));
-			this.dropItemStack(new ItemStack(ModItems.item_spawn_skyfire.get()));
-			this.dropItemStack(new ItemStack(ModItems.support_f35bomb.get()));
+			this.dropItemStack(new ItemStack(AdvanceArmy.item_spawn_f35));
+			this.dropItemStack(new ItemStack(AdvanceArmy.item_spawn_skyfire));
+			this.dropItemStack(new ItemStack(AdvanceArmy.support_f35bomb));
 			iron = 40;
 			gold = 50;
 			emerald = 20;
 			diamond = 18;
 			goldmelon = 7;
 			ironmelon = 8;
-			this.dropItemStack(new ItemStack(ModItems.challenge_aohuan.get()));//challenge_sea
+			this.dropItemStack(new ItemStack(AdvanceArmy.challenge_aohuan));//challenge_sea
 		}else if(this.getBoxID()==7){//
-			this.dropItemStack(new ItemStack(ModItems.support_trident.get()));
+			this.dropItemStack(new ItemStack(AdvanceArmy.support_trident));
 			iron = 45;
 			gold = 55;
 			emerald = 25;
 			diamond = 20;
 			goldmelon = 8;
 			ironmelon = 9;
-			this.dropItemStack(new ItemStack(ModItems.challenge_aohuan.get()));
+			this.dropItemStack(new ItemStack(AdvanceArmy.challenge_aohuan));
 		}else if(this.getBoxID()==8){
-			this.dropItemStack(new ItemStack(ModItems.support_3m22.get()));
-			this.dropItemStack(new ItemStack(ModItems.support_ember.get()));
-			this.dropItemStack(new ItemStack(ModItems.item_spawn_mast.get()));
-			if(this.level().random.nextInt(2)==1)this.dropItemStack(new ItemStack(ModItems.support_swun.get()));
-			if(this.level().random.nextInt(3)==1)this.dropItemStack(new ItemStack(ModItems.support_youhun.get()));
+			this.dropItemStack(new ItemStack(AdvanceArmy.support_3m22));
+			this.dropItemStack(new ItemStack(AdvanceArmy.support_ember));
+			this.dropItemStack(new ItemStack(AdvanceArmy.item_spawn_mast));
+			if(this.level.random.nextInt(2)==1)this.dropItemStack(new ItemStack(AdvanceArmy.support_swun));
+			if(this.level.random.nextInt(3)==1)this.dropItemStack(new ItemStack(AdvanceArmy.support_youhun));
 			iron = 50;
 			gold = 60;
 			emerald = 30;
 			diamond = 25;
 			goldmelon = 9;
 			ironmelon = 10;
-			this.dropItemStack(new ItemStack(ModItems.challenge_portal.get()));
+			this.dropItemStack(new ItemStack(AdvanceArmy.challenge_portal));
 		}else if(this.getBoxID()==9){
-			this.dropItemStack(new ItemStack(ModItems.support_ftkh.get()));
-			this.dropItemStack(new ItemStack(ModItems.support_nuke.get()));
-			this.dropItemStack(new ItemStack(ModItems.support_fw020.get()));
+			this.dropItemStack(new ItemStack(AdvanceArmy.support_ftkh));
+			this.dropItemStack(new ItemStack(AdvanceArmy.support_nuke));
+			this.dropItemStack(new ItemStack(AdvanceArmy.support_fw020));
 			iron = 64;
 			gold = 64;
 			emerald = 32;
@@ -236,30 +270,30 @@ public class RewardBox extends Mob implements ITool{
 			this.dropItemStack(new ItemStack(BlockRegister.GOLD_MELON.get().asItem()));
 		}
 		
-		for(int k2 = 0; k2 < iron+this.level().random.nextInt(iron); ++k2){
+		for(int k2 = 0; k2 < iron+this.level.random.nextInt(iron); ++k2){
 			this.dropItemStack(new ItemStack(Items.IRON_INGOT));
 		}
-		for(int k2 = 0; k2 < gold+this.level().random.nextInt(gold); ++k2){
+		for(int k2 = 0; k2 < gold+this.level.random.nextInt(gold); ++k2){
 			this.dropItemStack(new ItemStack(Items.GOLD_INGOT));
 		}
-		for(int k2 = 0; k2 < emerald+this.level().random.nextInt(emerald); ++k2){
+		for(int k2 = 0; k2 < emerald+this.level.random.nextInt(emerald); ++k2){
 			this.dropItemStack(new ItemStack(Items.EMERALD));
 		}
-		for(int k2 = 0; k2 < diamond+this.level().random.nextInt(diamond); ++k2){
+		for(int k2 = 0; k2 < diamond+this.level.random.nextInt(diamond); ++k2){
 			this.dropItemStack(new ItemStack(Items.DIAMOND));
 		}
-		for(int k2 = 0; k2 < goldmelon+this.level().random.nextInt(goldmelon); ++k2){
+		for(int k2 = 0; k2 < goldmelon+this.level.random.nextInt(goldmelon); ++k2){
 			this.dropItemStack(new ItemStack(BlockRegister.GOLD_MELON.get().asItem()));
 		}
-		for(int k2 = 0; k2 < ironmelon+this.level().random.nextInt(ironmelon); ++k2){
+		for(int k2 = 0; k2 < ironmelon+this.level.random.nextInt(ironmelon); ++k2){
 			this.dropItemStack(new ItemStack(BlockRegister.IRON_MELON.get().asItem()));
 		}
    }
 	
 
 	private void dropItemStack(ItemStack item) {
-	  ItemEntity itementity = new ItemEntity(this.level(), this.getX(), this.getY(), this.getZ(), item);
-	  this.level().addFreshEntity(itementity);
+	  ItemEntity itementity = new ItemEntity(this.level, this.getX(), this.getY(), this.getZ(), item);
+	  this.level.addFreshEntity(itementity);
 	}
 	
 	/*public boolean hurt(DamageSource source, float par2)

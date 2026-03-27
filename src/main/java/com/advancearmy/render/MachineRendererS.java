@@ -3,166 +3,238 @@ import java.util.List;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
-import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.util.Mth;
+
+import com.mojang.blaze3d.matrix.MatrixStack;
+import net.minecraft.client.renderer.ActiveRenderInfo;
+import net.minecraft.client.renderer.IRenderTypeBuffer;
+import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.math.vector.Vector3f;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
-import com.mojang.math.Axis;
+import net.minecraft.util.ResourceLocation;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL12;
 import com.mojang.blaze3d.platform.GlStateManager;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.client.renderer.entity.EntityRendererProvider;
-import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.entity.Entity;
+import net.minecraft.client.renderer.entity.EntityRendererManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import wmlib.client.obj.SAObjModel;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.entity.player.PlayerEntity;
 import advancearmy.entity.building.SoldierMachine;
 import advancearmy.item.ItemSpawn;
+
 import wmlib.client.render.SARenderHelper;
 import wmlib.client.render.SARenderHelper.RenderTypeSA;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.HandSide;
 import wmlib.client.event.RenderEntityEvent;
-import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.Util;
-import net.minecraft.client.renderer.RenderType;
-import wmlib.client.render.SARenderState;
-import wmlib.client.render.RenderTypeVehicle;
-import org.joml.Matrix4f;
+import net.minecraft.client.renderer.model.ItemCameraTransforms;
+import net.minecraft.item.Items;
+import net.minecraft.item.Item;
+import net.minecraft.inventory.EquipmentSlotType;
+
+import net.minecraft.util.Util;
 @OnlyIn(Dist.CLIENT)
 public class MachineRendererS extends MobRenderer<SoldierMachine, ModelNone<SoldierMachine>>{
-	private static final ResourceLocation dtex = ResourceLocation.tryParse("wmlib:textures/hud/count.png");
+	private static final ResourceLocation dtex = new ResourceLocation("wmlib:textures/hud/count.png");
 	private static final SAObjModel model = new SAObjModel("wmlib:textures/hud/digit.obj");
 	
-	private static final ResourceLocation tex = ResourceLocation.tryParse("advancearmy:textures/mob/building/soldierbuilding.png");
+	private static final ResourceLocation tex = new ResourceLocation("advancearmy:textures/mob/building/soldierbuilding.png");
 	private static final SAObjModel obj = new SAObjModel("advancearmy:textures/mob/building/soldierbuilding.obj");
 	
-	private static final ResourceLocation glint = ResourceLocation.tryParse("wmlib:textures/entity/flash/power3.png");
-	RenderType rt = RenderTypeVehicle.objrender(tex);
-	RenderType rt1 = SARenderState.getBlendGlow(tex);
-	RenderType f1 = SARenderState.getBlendDepthWrite(dtex);
-	RenderType gl = SARenderState.getBlendGlowGlint(glint);
-	
+	private static final ResourceLocation glint = new ResourceLocation("wmlib:textures/entity/flash/power3.png");
     public ResourceLocation getTextureLocation(SoldierMachine entity)
     {
 		return tex;
     }
-    public MachineRendererS(EntityRendererProvider.Context context)
+    public MachineRendererS(EntityRendererManager renderManagerIn)
     {
-    	super(context, new ModelNone(),0F);
+    	super(renderManagerIn, new ModelNone(),0F);
     }
-   private void renderArmWithItem(SoldierMachine ent, ItemStack items, ItemDisplayContext display, HumanoidArm arm, PoseStack stack, MultiBufferSource buffer, int packedLight) {
-      if (!items.isEmpty()) {
-			stack.pushPose();
-			//this.getParentModel().translateToHand(arm, stack);
-			//stack.mulPose(Axis.XP.rotationDegrees(-90.0F));
-			stack.mulPose(Axis.YP.rotationDegrees(180.0F));
-			stack.translate(2, 2, 0);
-			Minecraft.getInstance().getEntityRenderDispatcher().getItemInHandRenderer().renderItem(ent, items, display, true, stack, buffer, packedLight);
-			stack.popPose();
+	
+         
+   private void renderArmWithItem(SoldierMachine p_229135_1_, ItemStack p_229135_2_, ItemCameraTransforms.TransformType p_229135_3_, HandSide p_229135_4_, MatrixStack stack, IRenderTypeBuffer p_229135_6_, int p_229135_7_) {
+      if (!p_229135_2_.isEmpty()) {
+         stack.pushPose();
+         //this.getParentModel().translateToHand(p_229135_4_, stack);
+         //stack.mulPose(Vector3f.XP.rotationDegrees(-90.0F));
+         stack.mulPose(Vector3f.YP.rotationDegrees(180.0F));
+         stack.translate(2, 2, 0);
+         Minecraft.getInstance().getItemInHandRenderer().renderItem(p_229135_1_, p_229135_2_, p_229135_3_, true, stack, p_229135_6_, p_229135_7_);
+         stack.popPose();
       }
    }
+   
 	private static void setupGlintTexturing(float p_228548_0_) {
-
+		RenderSystem.matrixMode(5890);
+		RenderSystem.pushMatrix();
+		RenderSystem.loadIdentity();
+		long i = Util.getMillis() * 16L;
+		float f = (float)(i % 110000L) / 110000.0F;
+		float f1 = (float)(i % 30000L) / 30000.0F;
+		RenderSystem.translatef(-f, f1, 0.0F);
+		RenderSystem.rotatef(10.0F, 0.0F, 0.0F, 1.0F);
+		RenderSystem.scalef(p_228548_0_, p_228548_0_, p_228548_0_);
+		RenderSystem.matrixMode(5888);
 	}
    
     float iii;
 	static boolean glow = true;
 	static float shock =0;
-    public void render(SoldierMachine entity, float entityYaw, float partialTicks, PoseStack stack, MultiBufferSource buffer, int packedLight)
+    public void render(SoldierMachine entity, float entityYaw, float partialTicks, MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int packedLightIn)
     {
-		super.render(entity, entityYaw, partialTicks, stack, buffer, packedLight);
-		stack.pushPose();
+		super.render(entity, entityYaw, partialTicks, matrixStackIn, bufferIn, packedLightIn);
+		matrixStackIn.pushPose();
 		Minecraft mc = Minecraft.getInstance();
-		stack.pushPose();
-		stack.mulPose(Axis.YP.rotationDegrees(entity.getYawRoteNBT()));
+		int blockLight = (packedLightIn & 0xFFFF) >> 4;
+		int skyMask = packedLightIn >> 20 & 15;
+		float rainLevel = mc.level.getRainLevel(partialTicks);
+		float thunderLevel = mc.level.getThunderLevel(partialTicks);
+		float sunAngle = mc.level.getSunAngle(partialTicks);
+		float daylight = MathHelper.cos(sunAngle) * 0.5f + 0.5f;
+		daylight = MathHelper.clamp(daylight, 0.0f, 1.0f);
+		float weatherFactor = 1.0f - (rainLevel * 0.1f) - (thunderLevel * 0.2f);
+		float skyLight = (skyMask / 15.0f) * daylight * weatherFactor;
+		float blockLight1 = blockLight / 15.0f;
+		float finalLight = Math.max(skyLight, blockLight1)+0.2f;
+		GL11.glColor4f(finalLight, finalLight, finalLight, 1.0f);
+		GL11.glPushMatrix();
 		{
 			{
-				EntityRenderDispatcher manager = mc.getEntityRenderDispatcher();
+				ActiveRenderInfo activeRenderInfoIn = Minecraft.getInstance().getEntityRenderDispatcher().camera;
+				activeRenderInfoIn.setup(mc.level, (Entity)(mc.getCameraEntity() == null ? mc.player : mc.getCameraEntity()), 
+				!mc.options.getCameraType().isFirstPerson(), mc.options.getCameraType().isMirrored(), partialTicks);
+				Vector3d avector3d = activeRenderInfoIn.getPosition();
+				double camx = avector3d.x();
+				double camy = avector3d.y();
+				double camz = avector3d.z();
+				double d0 = MathHelper.lerp((double)partialTicks, entity.xOld, entity.getX());
+				double d1 = MathHelper.lerp((double)partialTicks, entity.yOld, entity.getY());
+				double d2 = MathHelper.lerp((double)partialTicks, entity.zOld, entity.getZ());
+				double xIn = d0 - camx;
+				double yIn = d1 - camy;
+				double zIn = d2 - camz;
+				
+				net.minecraftforge.client.event.EntityViewRenderEvent.CameraSetup cameraSetup = net.minecraftforge.client.ForgeHooksClient.onCameraSetup(mc.gameRenderer, activeRenderInfoIn, partialTicks);
+				activeRenderInfoIn.setAnglesInternal(cameraSetup.getYaw(), cameraSetup.getPitch());
+				GL11.glRotatef(cameraSetup.getRoll(), 0.0F, 0.0F, 1.0F);
+				GL11.glRotatef(activeRenderInfoIn.getXRot(), 1.0F, 0.0F, 0.0F);
+				GL11.glRotatef(activeRenderInfoIn.getYRot() + 180.0F, 0.0F, 1.0F, 0.0F);
+				GL11.glTranslatef((float) xIn, (float) yIn, (float) zIn);
+				EntityRendererManager manager = mc.getEntityRenderDispatcher();
+				
+				GL11.glRotatef(entity.getYawRoteNBT(), 0.0F, 1.0F, 0.0F);
+				//SoldierMachine entity = (SoldierMachine)entity;
 				float size1 = 2F;
 				int count = entity.getMoney();
-				stack.pushPose();
+				GL11.glPushMatrix();
+				
 				int f = entity.finish_time;
 				int ready = 0;
 				if(f>0)ready = (entity.getBuild() * 100)/f;
-				stack.pushPose();
-				obj.setRender(rt, null, stack, packedLight);
+				
+				//RenderSystem.enableBlend();
+
+				Minecraft.getInstance().getTextureManager().bind(tex);
+				GL11.glPushMatrix();
+				GL11.glEnable(GL11.GL_DEPTH_TEST);//
+				GL11.glEnable(GL12.GL_RESCALE_NORMAL);
+				GL11.glEnable(GL11.GL_LIGHTING);//
+				GL11.glEnable(GL11.GL_COLOR_MATERIAL);//
+				GlStateManager._shadeModel(GL11.GL_SMOOTH);
+				
 				obj.renderPart("head");
 				obj.renderPart("body");
+				
+				GlStateManager._shadeModel(GL11.GL_FLAT);
+				GL11.glDisable(GL12.GL_RESCALE_NORMAL);
+				GL11.glDisable(GL11.GL_LIGHTING);
+		
 				if(count<=0||entity.isCover){
-					RenderSystem.setShaderColor(1F, 0.3F, 0.3F, 1);
+					GL11.glColor4f(1F, 0.3F, 0.3F, 1);
 				}else{
-					RenderSystem.setShaderColor(0.6F, 1, 0.6F, 1);
+					GL11.glColor4f(0.6F, 1, 0.6F, 1);
 				}
-				obj.setRender(rt1, null, null, 0xF000F0);
+				SARenderHelper.enableBlendMode(RenderTypeSA.ALPHA);//ADDITIVE
 				obj.renderPart("head_light");
 				obj.renderPart("body_light");
-				stack.popPose();
+				SARenderHelper.disableBlendMode(RenderTypeSA.ALPHA);//
+				GL11.glPopMatrix();//glend
+				
 				if(count<=0||entity.isCover){
-					RenderSystem.setShaderColor(1F, 0.3F, 0.3F, 1);
+					GL11.glColor4f(1F, 0.3F, 0.3F, 1);
 				}else{
-					RenderSystem.setShaderColor(0.6F, 1, 0.6F, 1);
+					GL11.glColor4f(0.6F, 1, 0.6F, 1);
 				}
+				
 				if(entity.getBuild()>0){
-					stack.pushPose();
-					obj.setRender(gl, null, null, 0xF000F0);
-					
-					long time = (long)((double)Util.getMillis() * Minecraft.getInstance().options.glintSpeed().get() * 16.0);
-					float u = (float)(time % 110000L) / 110000.0f;
-					float v = (float)(time % 30000L) / 30000.0f;
-					Matrix4f move = new Matrix4f().translation(u, v, 0.0f);
-					RenderSystem.setTextureMatrix(move);
+					GL11.glPushMatrix();
+					//GL11.glTranslatef(0F, 0F, 6F);
+					setupGlintTexturing(8F);
+					Minecraft.getInstance().getTextureManager().bind(glint);
+					//RenderSystem.depthMask(false);
+					RenderSystem.enableBlend();
+					RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE);
+					GL11.glPushMatrix();//glstart
+					//GlStateManager._scalef(1.01F, 1.01F, 1.01F);
 					obj.renderPart("power");
-					RenderSystem.resetTextureMatrix();
-					stack.popPose();
+					GL11.glPopMatrix();//glend
+					RenderSystem.matrixMode(5890);
+					RenderSystem.popMatrix();
+					RenderSystem.matrixMode(5888);
+					RenderSystem.defaultBlendFunc();
+					RenderSystem.disableBlend();
+					//RenderSystem.depthMask(true);
+					GL11.glPopMatrix();//glend
 				}
 				if(count<=0){
-					RenderSystem.setShaderColor(1F, 0.3F, 0.3F, 1);
+					GL11.glColor4f(1F, 0.3F, 0.3F, 1);
 				}else{
-					RenderSystem.setShaderColor(0.6F, 1, 0.6F, 1);
+					GL11.glColor4f(0.6F, 1, 0.6F, 1);
 				}
 				
-				stack.mulPose(Axis.YP.rotationDegrees(-entity.getYawRoteNBT()));
-				stack.mulPose(Axis.YP.rotationDegrees(-manager.camera.getYRot()+180F));
-				stack.translate(0, 0, 0);
-				stack.mulPose(Axis.XP.rotationDegrees(-manager.camera.getXRot()));
-				stack.translate(0, 0, 0);
-				stack.translate(0F, 4F, 0F);
-				model.setRender(f1, null, stack, 0xF000F0);
 				
-				stack.pushPose();
-				renderCount(count,stack);
-				stack.popPose();
+				GL11.glRotatef(-entity.getYawRoteNBT(), 0.0F, 1.0F, 0.0F);
+				GlStateManager._rotatef(-manager.camera.getYRot()+180F, 0.0F, 1.0F, 0.0F);
+				GL11.glTranslatef(0, 0, 0);
+				GL11.glRotatef(-manager.camera.getXRot(), 1.0F, 0.0F, 0.0F);
+				GL11.glTranslatef(0, 0, 0);
+				GL11.glTranslatef(0F, 4F, 0F);
+				Minecraft.getInstance().getTextureManager().bind(dtex);
+				SARenderHelper.enableBlendMode(RenderTypeSA.ALPHA);//
+				{
+					GL11.glPushMatrix();
+					renderCount(count);
+					GL11.glPopMatrix();
+				}
 				
-				stack.pushPose();
-				stack.translate(-2F, 1F, 0F);
-				renderCount(entity.getVehicleC(),stack);
-				stack.popPose();
+				GL11.glPushMatrix();
+				GL11.glTranslatef(-2F, 1F, 0F);
+				renderCount(entity.getVehicleC());
+				GL11.glPopMatrix();
 				
-				stack.pushPose();
-				stack.translate(0F, 1F, 0F);
-				renderCount(ready,stack);
-				stack.translate(0.4F*size1,0,0);
-				model.renderPart("rate");//
-				stack.popPose();
-				
-				RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+				{
+					GL11.glTranslatef(0F, 1F, 0F);
+					renderCount(ready);
+					GlStateManager._translatef(0.3F*size1,0,0);
+					model.renderPart("rate");//
+				}
+				GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
 				//RenderSystem.disableBlend();
-				//-SARenderHelper.disableBlendMode(RenderType.ALPHA);//
-				stack.popPose();
+				SARenderHelper.disableBlendMode(RenderTypeSA.ALPHA);//
+				GL11.glPopMatrix();
 			}
 		}
+		
 		if(entity.getMainHandItem()!=null){
 			ItemStack this_heldItem = entity.getMainHandItem();
-			this.renderArmWithItem(entity, this_heldItem, ItemDisplayContext.THIRD_PERSON_RIGHT_HAND, HumanoidArm.RIGHT, stack, buffer, packedLight);
+			this.renderArmWithItem(entity, this_heldItem, ItemCameraTransforms.TransformType.THIRD_PERSON_RIGHT_HAND, HandSide.RIGHT, matrixStackIn, bufferIn, packedLightIn);
 		}
-		stack.popPose();
-		stack.popPose();
+		
+		GL11.glPopMatrix();//glend
+		matrixStackIn.popPose();
 	}
-		void renderCount(int count, PoseStack stack){
+	void renderCount(int count){
 		float size1 = 2F;
 		int num = count;
 		int shiwei=0,baiwei=0,qianwei=0,gewei=0;
@@ -179,33 +251,33 @@ public class MachineRendererS extends MobRenderer<SoldierMachine, ModelNone<Sold
 		}else if(count<100)
 		{
 			model.renderPart("obj" + t2);//
-			stack.translate(0.4F*size1,0,0);
+			GL11.glTranslatef(0.4F*size1,0,0);
 			model.renderPart("obj" + t1);//
 		}else if(count<1000)
 		{
 			model.renderPart("obj" + t3);//
-			stack.translate(0.4F*size1,0,0);
+			GL11.glTranslatef(0.4F*size1,0,0);
 			model.renderPart("obj" + t2);//
-			stack.translate(0.4F*size1,0,0);
+			GL11.glTranslatef(0.4F*size1,0,0);
 			model.renderPart("obj" + t1);//
 		}else if(count<10000)
 		{
 			model.renderPart("obj" + t4);//
-			stack.translate(0.4F*size1,0,0);
+			GL11.glTranslatef(0.4F*size1,0,0);
 			model.renderPart("obj" + t3);//
-			stack.translate(0.4F*size1,0,0);
+			GL11.glTranslatef(0.4F*size1,0,0);
 			model.renderPart("obj" + t2);//
-			stack.translate(0.4F*size1,0,0);
+			GL11.glTranslatef(0.4F*size1,0,0);
 			model.renderPart("obj" + t1);//
 		}else{
 			model.renderPart("obj9");//
-			stack.translate(0.4F*size1,0,0);
+			GL11.glTranslatef(0.4F*size1,0,0);
 			model.renderPart("obj9");//
-			stack.translate(0.4F*size1,0,0);
+			GL11.glTranslatef(0.4F*size1,0,0);
 			model.renderPart("obj9");//
-			stack.translate(0.4F*size1,0,0);
+			GL11.glTranslatef(0.4F*size1,0,0);
 			model.renderPart("obj9");//
-			stack.translate(0.4F*size1,0,0);
+			GL11.glTranslatef(0.4F*size1,0,0);
 			model.renderPart("add");//+
 		}
 	}

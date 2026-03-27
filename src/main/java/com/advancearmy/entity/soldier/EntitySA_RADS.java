@@ -3,99 +3,118 @@ package advancearmy.entity.soldier;
 import java.util.List;
 
 import advancearmy.AdvanceArmy;
+import wmlib.common.bullet.EntityBullet;
+import wmlib.common.bullet.EntityShell;
 import advancearmy.event.SASoundEvent;
-import advancearmy.init.ModEntities;
+
 import net.minecraft.world.Difficulty;
-import net.minecraft.world.level.Level;
-import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.World;
+import net.minecraft.world.server.ServerWorld;
 
-import net.minecraft.world.InteractionHand;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Hand;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.SoundCategory;
 
-import net.minecraft.network.chat.Component;
+import net.minecraft.util.text.TranslationTextComponent;
 
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.core.BlockPos;
-import net.minecraft.util.Mth;
-import net.minecraft.world.phys.Vec3;
-import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.DamageSource;
+import net.minecraft.util.SoundEvent;
+import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.SoundEvents;
 
-import net.minecraft.world.item.Items;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.level.block.Blocks;
+import net.minecraft.item.Items;
+import net.minecraft.item.Item;
+import net.minecraft.block.Blocks;
 
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.scores.Team;
+import net.minecraft.item.ItemStack;
+import net.minecraft.scoreboard.Team;
+import net.minecraft.block.material.Material;
 
+import net.minecraft.network.IPacket;
+import net.minecraft.network.datasync.DataParameter;
+import net.minecraft.network.datasync.DataSerializers;
+import net.minecraft.network.datasync.EntityDataManager;
 
-import net.minecraft.network.protocol.Packet;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.NBTUtil;
 
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtUtils;
+import net.minecraft.entity.ai.attributes.AttributeModifierMap;
+import net.minecraft.entity.ai.attributes.Attributes;
 
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.entity.IRangedAttackMob;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.monster.IMob;
+import net.minecraft.entity.Entity;
 
+import net.minecraft.entity.CreatureEntity;
+import net.minecraft.entity.LivingEntity;
 
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.world.entity.Entity;
+import net.minecraft.entity.MobEntity;
+import net.minecraft.entity.MoverType;
+import net.minecraft.entity.EntitySize;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.Pose;
 
-import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.LivingEntity;
-
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.MoverType;
-import net.minecraft.world.entity.EntityDimensions;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.Pose;
-
-import net.minecraftforge.network.PlayMessages;
-import net.minecraftforge.network.NetworkHooks;
+import net.minecraftforge.fml.network.FMLPlayMessages;
+import net.minecraftforge.fml.network.NetworkHooks;
 
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.network.chat.Component;
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.ai.targeting.TargetingConditions;
+import net.minecraft.entity.ai.goal.LookAtGoal;
+import net.minecraft.entity.ai.goal.LookRandomlyGoal;
+import net.minecraft.entity.ai.goal.NearestAttackableTargetGoal;
+import net.minecraft.entity.ai.goal.RangedAttackGoal;
+import net.minecraft.entity.ai.goal.WaterAvoidingRandomWalkingGoal;
+import net.minecraft.entity.ai.goal.FollowOwnerGoal;
+
+import com.mrcrayfish.guns.common.Gun;
+import com.mrcrayfish.guns.item.GunItem;
+import com.mrcrayfish.guns.item.IAmmo;
+import com.mrcrayfish.guns.init.ModSounds;
+
+import net.minecraft.inventory.EquipmentSlotType;
+import net.minecraft.util.ActionResultType;
+
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.Style;
+import net.minecraft.util.text.TranslationTextComponent;
+
+import net.minecraft.entity.ai.goal.OwnerHurtByTargetGoal;
+import net.minecraft.entity.ai.goal.OwnerHurtTargetGoal;
+import net.minecraft.entity.item.ItemEntity;
+import net.minecraft.entity.EntityPredicate;
 import java.util.function.Predicate;
 
 import net.minecraftforge.fml.ModList;
-import net.minecraft.world.entity.TamableAnimal;
-
+import net.minecraft.entity.passive.TameableEntity;
 import wmlib.common.living.EntityWMSeat;
-import wmlib.common.living.ai.LivingLockGoal;
-import wmlib.common.living.ai.LivingSearchTargetGoalSA;
-import advancearmy.entity.ai.WaterAvoidingRandomWalkingGoalSA;
 import advancearmy.entity.EntitySA_SquadBase;
 import advancearmy.entity.EntitySA_Seat;
-import advancearmy.entity.ai.SoldierSearchTargetGoalSA;
+import advancearmy.entity.ai.SoldierAttackableTargetGoalSA;
 import wmlib.common.living.WeaponVehicleBase;
 import advancearmy.entity.ai.AI_EntityWeapon;
 import wmlib.common.living.EntityWMVehicleBase;
-
+import wmlib.common.bullet.EntityRad;
 import wmlib.common.network.PacketHandler;
 import wmlib.common.network.message.MessageTrail;
-import net.minecraftforge.network.PacketDistributor;
-import net.minecraft.world.level.block.state.BlockState;
-import wmlib.common.bullet.EntityRad;
-import wmlib.init.WMModEntities;
+import net.minecraftforge.fml.network.PacketDistributor;
+import net.minecraft.block.BlockState;
 import wmlib.api.IRadSoldier;
+import wmlib.WarMachineLib;
 import safx.SagerFX;
 public class EntitySA_RADS extends EntitySA_SquadBase implements IRadSoldier{
-	public EntitySA_RADS(EntityType<? extends EntitySA_RADS> sodier, Level worldIn) {
+	public EntitySA_RADS(EntityType<? extends EntitySA_RADS> sodier, World worldIn) {
 		super(sodier, worldIn);
 		this.fireposX=0.5F;
 		this.fireposZ=2F;
-		this.unittex = ResourceLocation.tryParse("advancearmy:textures/item/item_spawn_rads.png");
+		this.unittex = new ResourceLocation("advancearmy:textures/item/item_spawn_rads.png");
 	}
-	public EntitySA_RADS(PlayMessages.SpawnEntity packet, Level worldIn) {
-		super(ModEntities.ENTITY_RADS.get(), worldIn);
+	public EntitySA_RADS(FMLPlayMessages.SpawnEntity packet, World worldIn) {
+		super(AdvanceArmy.ENTITY_RADS, worldIn);
 	}
 	
     protected SoundEvent getAmbientSound()
@@ -112,7 +131,6 @@ public class EntitySA_RADS extends EntitySA_SquadBase implements IRadSoldier{
         return SASoundEvent.fs_die.get();
     }
 	
-	//@Override
 	public void setMove(int id, int x, int y, int z){
 		this.setMoveType(id);
 		this.setMovePosX(x);
@@ -192,7 +210,7 @@ public class EntitySA_RADS extends EntitySA_SquadBase implements IRadSoldier{
 		
 		this.attack_height_max = this.attack_range_max;
 		
-		float moveSpeed = 0.18F;
+		float moveSpeed = 0.20F;
 		if(this.getRemain2()==1){
 			moveSpeed = 0.1F;
 			if(this.getBbHeight()!=0.5F)this.setSize(0.5F, 0.5F);
@@ -233,6 +251,7 @@ public class EntitySA_RADS extends EntitySA_SquadBase implements IRadSoldier{
 		float movesp = moveSpeed;
 		this.moveway(this, movesp, this.attack_range_max);
 		if(this.isInWater()|| this.isInLava())movesp = moveSpeed*3F;
+		boolean isAttackVehicle = false;
 		if(this.getTarget()!=null && this.isAttacking() && (this.getVehicle()==null||this.canfire)){
 			if(/*!this.getChoose()*/this.getOwner()==null){
 				if(radtime>450&&this.getMoveType()==1)this.setRemain2(5);
@@ -241,6 +260,7 @@ public class EntitySA_RADS extends EntitySA_SquadBase implements IRadSoldier{
 				}
 			}
 			LivingEntity livingentity = this.getTarget();
+			if(livingentity.getMaxHealth()>this.getMaxHealth()||livingentity.getVehicle()!=null||livingentity instanceof EntityWMVehicleBase)isAttackVehicle = true;
 			if(livingentity.isAlive() && livingentity!=null && (this.aim_time>50||!this.needaim && this.aim_time>30)){
 				if(this.getWeaponId()==1){
 					if(this.cooltime > this.fire_tick){
@@ -261,10 +281,10 @@ public class EntitySA_RADS extends EntitySA_SquadBase implements IRadSoldier{
 				}else{
 					if(this.radtime>460 &&!this.isPassenger()){
 						this.playSound(SASoundEvent.deploy_fsp.get(),5,1);
-						EntityRad rad = new EntityRad(WMModEntities.ENTITY_RAD.get(),this.level());
+						EntityRad rad = new EntityRad(WarMachineLib.ENTITY_RAD,this.level);
 						rad.moveTo(this.getX(), this.getY(), this.getZ(), 0, 0.0F);
 						rad.setAggressive(true);
-						this.level().addFreshEntity(rad);
+						this.level.addFreshEntity(rad);
 						this.radtime=0;
 					}
 				}
@@ -281,7 +301,7 @@ public class EntitySA_RADS extends EntitySA_SquadBase implements IRadSoldier{
 			Team team1 = entity1.getTeam();
 			if(team != null && team1 != team && team1 != null){
 				return true;
-			}else if(entity instanceof Enemy && ((LivingEntity) entity).getHealth() > 0.0F && (team == null||team != team1)){
+			}else if(entity instanceof IMob && ((LivingEntity) entity).getHealth() > 0.0F && (team == null||team != team1)){
 				return true;
 			}else{
 				return false;
@@ -296,16 +316,18 @@ public class EntitySA_RADS extends EntitySA_SquadBase implements IRadSoldier{
 		double xx11 = 0;
 		double zz11 = 0;
 		float base = 0;
-		base = Mth.sqrt((this.fireposZ - this.firebaseZ)* (this.fireposZ - this.firebaseZ) + (this.fireposX - 0)*(this.fireposX - 0)) * Mth.sin(-this.getXRot()  * (1 * (float) Math.PI / 180));
-		xx11 -= Mth.sin(this.yHeadRot * 0.01745329252F) * this.fireposZ;
-		zz11 += Mth.cos(this.yHeadRot * 0.01745329252F) * this.fireposZ;
-		xx11 -= Mth.sin(this.yHeadRot * 0.01745329252F + 1.57F) * fireposX;
-		zz11 += Mth.cos(this.yHeadRot * 0.01745329252F + 1.57F) * fireposX;
+		base = MathHelper.sqrt((this.fireposZ - this.firebaseZ)* (this.fireposZ - this.firebaseZ) + (this.fireposX - 0)*(this.fireposX - 0)) * MathHelper.sin(-this.xRot  * (1 * (float) Math.PI / 180));
+		xx11 -= MathHelper.sin(this.yHeadRot * 0.01745329252F) * this.fireposZ;
+		zz11 += MathHelper.cos(this.yHeadRot * 0.01745329252F) * this.fireposZ;
+		xx11 -= MathHelper.sin(this.yHeadRot * 0.01745329252F + 1.57F) * fireposX;
+		zz11 += MathHelper.cos(this.yHeadRot * 0.01745329252F + 1.57F) * fireposX;
 		LivingEntity shooter = this;
-		//if(ModList.get().isLoaded("safx"))SagerFX.proxy.createFX("RadGun", null, this.getX()+xx11, this.getY()+this.fireposY+base, this.getZ()+zz11, 0, 0, 0, 1);
-		Vec3 locken = Vec3.directionFromRotation(this.getRotationVector());
+		/*{
+			if(ModList.get().isLoaded("safx"))SagerFX.proxy.createFX("RadGun", null, this.getX()+xx11, this.getY()+this.fireposY+base, this.getZ()+zz11, 0, 0, 0, 2);
+		}*/
+		Vector3d locken = Vector3d.directionFromRotation(this.getRotationVector());
 		float d = 120;
-		int range = 1;
+		int range = 3;
 		int ix = 0;
 		int iy = 0;
 		int iz = 0;
@@ -316,43 +338,43 @@ public class EntitySA_RADS extends EntitySA_SquadBase implements IRadSoldier{
 			iy = (int) (this.getY()+this.fireposY+base + locken.y * xxx);
 			iz = (int) (this.getZ()+zz11 + locken.z * xxx);
 			BlockPos blockpos = new BlockPos(ix, iy, iz);
-			BlockState iblockstate = this.level().getBlockState(blockpos);
-			if (!iblockstate.isAir()&& !iblockstate.getCollisionShape(this.level(), blockpos).isEmpty()){
+			BlockState iblockstate = this.level.getBlockState(blockpos);
+			if (!iblockstate.isAir(this.level, blockpos)&& !iblockstate.getCollisionShape(this.level, blockpos).isEmpty()){
 				break;
 			}else{
-				AABB axisalignedbb = (new AABB(ix-range, iy-range, iz-range, 
+				AxisAlignedBB axisalignedbb = (new AxisAlignedBB(ix-range, iy-range, iz-range, 
 						ix+range, iy+range, iz+range)).inflate(1D);
-				List<Entity> llist = this.level().getEntities(this,axisalignedbb);
+				List<Entity> llist = this.level.getEntities(this,axisalignedbb);
 				if (llist != null) {
 					for (int lj = 0; lj < llist.size(); lj++) {
 						Entity entity1 = (Entity) llist.get(lj);
 						if (entity1 != null && entity1 instanceof LivingEntity) {
 							if (NotFriend(entity1) && entity1 != shooter && entity1 != this) {
 								lockTarget = (LivingEntity)entity1;
-								if(lockTarget.getVehicle()!=null){
-									Entity ve = lockTarget.getVehicle();
+								if(lockTarget.getVehicle()!=null && lockTarget.getVehicle() instanceof LivingEntity){
+									LivingEntity ve = (LivingEntity)lockTarget.getVehicle();
 									ve.invulnerableTime = 0;
-									ve.hurt(this.damageSources().wither(), 30);
-									ve.hurt(this.damageSources().inFire(), 5);
+									ve.hurt(DamageSource.WITHER, 12+(0.01F*(ve.getMaxHealth()-ve.getHealth())));
+									ve.hurt(DamageSource.IN_FIRE, 5);
 								}else{
 									lockTarget.invulnerableTime = 0;
-									lockTarget.hurt(this.damageSources().wither(), 12+(0.01F*(lockTarget.getMaxHealth()-lockTarget.getHealth())));
-									lockTarget.hurt(this.damageSources().inFire(), 5);
+									lockTarget.hurt(DamageSource.WITHER, 12+(0.01F*(lockTarget.getMaxHealth()-lockTarget.getHealth())));
+									lockTarget.hurt(DamageSource.IN_FIRE, 5);
 								}
 								stop = true;
-								ix=(int)lockTarget.getX();
-								iy=(int)lockTarget.getY();
-								iz=(int)lockTarget.getZ();
 								break;
 							}
 						}
 					}
 				}
-				if(stop)break;
+				if(stop){
+					++pierce;
+					if(pierce>2)break;
+				}
 			}
 		}
-		//if(ModList.get().isLoaded("safx"))SagerFX.proxy.createFX("RadHit", null, ix, iy+1.5D, iz, 0, 0, 0, 1);
-		MessageTrail messageBulletTrail = new MessageTrail(true, 2, "advancearmy:textures/entity/flash/rad_beam" ,this.getX()+xx11, this.getY()+this.fireposY-1.5F+base, this.getZ()+zz11, this.getDeltaMovement().x, this.getDeltaMovement().z, ix, iy, iz, 15F, 1);
-		PacketHandler.getPlayChannel_Client().send(PacketDistributor.NEAR.with(() -> new PacketDistributor.TargetPoint(this.getX(), this.getY(), this.getZ(), 80, this.level().dimension())), messageBulletTrail);
+		///if(ModList.get().isLoaded("safx"))SagerFX.proxy.createFX("RadHit", null, ix, iy+0.5D, iz, 0, 0, 0, 2);
+		MessageTrail messageBulletTrail = new MessageTrail(true, 2, "advancearmy:textures/entity/flash/rad_beam" ,this.getX()+xx11, this.getY()+this.fireposY-1.5F+base, this.getZ()+zz11, this.getDeltaMovement().x, this.getDeltaMovement().z, ix, iy-1, iz, 15F, 1);
+		PacketHandler.getPlayChannel2().send(PacketDistributor.NEAR.with(() -> new PacketDistributor.TargetPoint(this.getX(), this.getY(), this.getZ(), 80, this.level.dimension())), messageBulletTrail);
 	}
 }

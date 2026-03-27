@@ -1,41 +1,54 @@
 package advancearmy.item;
-import java.util.List;
-import javax.annotation.ParametersAreNonnullByDefault;
-import net.minecraft.world.level.block.state.BlockState;          // BlockState 路径更新
-import net.minecraft.world.level.block.Blocks;                   // Blocks 包路径更新
-import net.minecraft.world.entity.EntityType;                    // 路径更新
-import net.minecraft.world.entity.MobSpawnType;                  // SpawnReason → MobSpawnType
-import net.minecraft.world.entity.player.Player;                 // Player → Player
-import net.minecraft.world.item.Item;                            // 路径更新
-import net.minecraft.world.item.ItemStack;                       // 路径更新
-import net.minecraft.world.item.context.UseOnContext;            // ItemUseContext → UseOnContext
-import net.minecraft.world.InteractionResult;                    // 路径更新
-import net.minecraft.world.InteractionHand;                      // Hand → InteractionHand
-import net.minecraft.nbt.CompoundTag;                            // CompoundNBT → CompoundTag
-import net.minecraft.stats.Stats;                                // 路径更新
-import net.minecraft.world.level.block.entity.SpawnerBlockEntity; // MobSpawnerTileEntity → SpawnerBlockEntity
-import net.minecraft.world.level.block.entity.BlockEntity;        // TileEntity → BlockEntity
-import net.minecraft.network.chat.Component;                     // ITextComponent → Component
-import net.minecraft.ChatFormatting;                             // ChatFormatting → ChatFormatting
-import net.minecraft.network.chat.MutableComponent;              // 替代 TranslationTextComponent（通过 Component.translatable()）
-import net.minecraft.world.item.TooltipFlag;                     // ITooltipFlag → TooltipFlag
-import net.minecraft.world.entity.EquipmentSlot;                 // EquipmentSlotType → EquipmentSlot
-import net.minecraft.world.item.enchantment.Enchantment;         // 路径更新
-import net.minecraft.world.level.Level;                          // World → Level
-import net.minecraft.world.entity.LivingEntity;                  // 路径更新
-import net.minecraft.world.item.Items;                           // 路径更新
-import net.minecraft.world.InteractionResultHolder;
-import net.minecraft.world.scores.PlayerTeam;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.DifficultyInstance;
-import net.minecraft.world.entity.MobSpawnType;
-import net.minecraft.world.entity.SpawnGroupData;
-import net.minecraft.world.entity.TamableAnimal;
-import net.minecraft.server.level.ServerLevel;
 
-import wmlib.common.enchantment.EnchantmentTypes;
+import java.util.List;
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
+import net.minecraft.block.FlowingFluidBlock;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.ItemUseContext;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.stats.Stats;
+import net.minecraft.tileentity.MobSpawnerTileEntity;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.ActionResult;
+import net.minecraft.util.ActionResultType;
+import net.minecraft.util.Hand;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.BlockRayTraceResult;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.RayTraceContext;
+import net.minecraft.util.math.RayTraceResult;
+import net.minecraft.world.World;
+
+import advancearmy.entity.EntitySA_SoldierBase;
+import advancearmy.entity.soldier.EntitySA_ConscriptX;
+import advancearmy.entity.map.SupportPoint;
+
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.TextFormatting;
+import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.client.util.ITooltipFlag;
 import advancearmy.AdvanceArmy;
+import net.minecraft.inventory.EquipmentSlotType;
+import net.minecraft.item.Items;
+import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.particles.ItemParticleData;
+import net.minecraft.particles.ParticleTypes;
+import net.minecraft.entity.LivingEntity;
+import wmlib.common.living.WeaponVehicleBase;
 import wmlib.common.item.ItemSummon;
+import net.minecraft.entity.ILivingEntityData;
+import wmlib.common.block.BlockRegister;
+import net.minecraft.world.server.ServerWorld;
+
+import advancearmy.entity.building.SoldierMachine;
+import advancearmy.entity.building.VehicleMachine;
+import net.minecraft.entity.passive.TameableEntity;
 import wmlib.client.obj.SAObjModel;
 public class ItemSupport extends ItemSummon{
 	public SAObjModel obj_model = null;
@@ -44,6 +57,9 @@ public class ItemSupport extends ItemSummon{
 	public int xp = 10;
 	public int cool = 20;
 	public int type = 0;// 1 once
+	public EntitySA_SoldierBase soldier = null;
+	public WeaponVehicleBase vehicle = null;
+	public TameableEntity building = null;
 	public ItemSupport(Item.Properties builder, int i, int t, int x, int c) {
 		super(builder);
 		this.id = i;
@@ -52,50 +68,63 @@ public class ItemSupport extends ItemSummon{
 		this.cool=c;
 		this.infor3="经验值消耗:"+x;
 		this.infor4="冷却时间:"+c/20F+"s";
-		if(i==0){
-			isSummon=true;
-			enc=true;
-			infor1="advancearmy.infor.portal_star.desc";
-		}
-		if(i==4)enc=true;
-		if(i==5)enc=true;
-		if(i==15)enc=true;
-		if(i==16)enc=true;
-		if(i==17)enc=true;
 	}
 	public boolean isSummon = false;
 	public String infor1 = null;
 	public String infor2 = null;
 	public String infor3 = null;
 	public String infor4 = null;
+	
 	@Override
-	@ParametersAreNonnullByDefault
-	public void appendHoverText(ItemStack stack, Level worldIn, List<Component> tooltip, TooltipFlag flagIn) {
+	public void appendHoverText(ItemStack stack, World worldIn, List<ITextComponent> tooltip, ITooltipFlag flagIn) {
 		super.appendHoverText(stack, worldIn, tooltip, flagIn);
-		if(!isSummon)tooltip.add(Component.translatable("advancearmy.infor.support1.desc").withStyle(ChatFormatting.GREEN));//name
+		if(!isSummon)tooltip.add(new TranslationTextComponent("advancearmy.infor.support1.desc").withStyle(TextFormatting.GREEN));//name
 		if(type==0){
-			if(infor1!=null)tooltip.add(Component.translatable(infor1).withStyle(ChatFormatting.GREEN));//name
-			if(infor2!=null)tooltip.add(Component.translatable(infor2).withStyle(ChatFormatting.RED));//create
-			if(infor3!=null)tooltip.add(Component.translatable(infor3).withStyle(ChatFormatting.YELLOW));//describe1
-			if(infor4!=null)tooltip.add(Component.translatable(infor4).withStyle(ChatFormatting.YELLOW));//describe2
+			if(infor1!=null)tooltip.add(new TranslationTextComponent(infor1).withStyle(TextFormatting.GREEN));//name
+			if(infor2!=null)tooltip.add(new TranslationTextComponent(infor2).withStyle(TextFormatting.RED));//create
+			if(infor3!=null)tooltip.add(new TranslationTextComponent(infor3).withStyle(TextFormatting.YELLOW));//describe1
+			if(infor4!=null)tooltip.add(new TranslationTextComponent(infor4).withStyle(TextFormatting.YELLOW));//describe2
 		}else{
-			tooltip.add(Component.translatable("advancearmy.infor.support2.desc").withStyle(ChatFormatting.RED));//create
+			tooltip.add(new TranslationTextComponent("advancearmy.infor.support2.desc").withStyle(TextFormatting.RED));//create
 		}
+	}
+	
+	public void spawnCreature(World worldIn, PlayerEntity playerIn, int weaponid, boolean summon, double x, double y, double z, int summonid)
+	{
+		/*if (worldIn.isClientSide) return;
+		SupportPoint point = new SupportPoint(AdvanceArmy.ENTITY_SPT, worldIn);
+		if(playerIn!=null){
+			if(playerIn.isCrouching() && playerIn.isCreative()){
+			}else{
+				point.tame(playerIn);
+				if(playerIn.getTeam()!=null){
+					playerIn.level.getScoreboard().addPlayerToTeam(point.getUUID().toString(), playerIn.getTeam());
+				}
+			}
+		}
+		point.setSummonID(id);
+		point.moveTo(x + 0.5, y+1, z + 0.5, 0, 0);
+		worldIn.addFreshEntity(point);*/
 	}
    
 	public boolean enc = false;
-	
-	@Override
   	public boolean isFoil(ItemStack p_77636_1_) {
 	  return enc;
 	}
    
-	public InteractionResult useOn(UseOnContext context) {
-	  Level world = context.getLevel();
+	public ActionResultType useOn(ItemUseContext context) {
+	  World world = context.getLevel();
 	  if (world.isClientSide) {
-		 return InteractionResult.SUCCESS;
+		 return ActionResultType.SUCCESS;
 	  } else {
-		return InteractionResult.SUCCESS;
+		/*ItemStack itemstack = context.getItemInHand();
+		if (!context.getPlayer().abilities.instabuild && type == 3)
+		{
+			itemstack.shrink(1);
+		}
+		BlockPos pos = context.getClickedPos();*/
+		//spawnCreature(world, context.getPlayer(), 0, false, (double)pos.getX(), (double)pos.getY(), (double)pos.getZ(),0);
+		return ActionResultType.SUCCESS;
 	  }
 	}
 
@@ -103,12 +132,12 @@ public class ItemSupport extends ItemSummon{
 	  return false;
 	}
 
-	public InteractionResultHolder<ItemStack> use(Level worldIn, Player playerIn, InteractionHand handIn) {
+	public ActionResult<ItemStack> use(World worldIn, PlayerEntity playerIn, Hand handIn) {
 	  ItemStack itemstack = playerIn.getItemInHand(handIn);
 	  if (worldIn.isClientSide) {
-		 return new InteractionResultHolder<>(InteractionResult.PASS, itemstack);
+		 return new ActionResult<>(ActionResultType.PASS, itemstack);
 	  } else {
-		 return new InteractionResultHolder<>(InteractionResult.FAIL, itemstack);
+		 return new ActionResult<>(ActionResultType.FAIL, itemstack);
 	  }
 	}
 }

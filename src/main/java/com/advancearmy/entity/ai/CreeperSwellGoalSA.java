@@ -1,8 +1,9 @@
 package advancearmy.entity.ai;
 import advancearmy.entity.mob.ERO_Creeper;
 import java.util.EnumSet;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.monster.CreeperEntity;
+import net.minecraft.entity.ai.goal.Goal;
 public class CreeperSwellGoalSA extends Goal {
    private final ERO_Creeper creeper;
    private LivingEntity target;
@@ -32,7 +33,7 @@ public class CreeperSwellGoalSA extends Goal {
          this.creeper.setSwellDir(-1);
       } else if (this.creeper.distanceToSqr(this.target) > 49.0D) {
          this.creeper.setSwellDir(-1);
-      } else if (!this.creeper.getSensing().hasLineOfSight(this.target)) {
+      } else if (!this.creeper.getSensing().canSee(this.target)) {
          this.creeper.setSwellDir(-1);
       } else {
          this.creeper.setSwellDir(1);

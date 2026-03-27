@@ -3,55 +3,60 @@ package advancearmy.entity;
 import java.util.List;
 
 import javax.annotation.Nullable;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.World;
+import net.minecraft.util.DamageSource;
+import net.minecraft.util.Hand;
 
-
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.core.BlockPos;
-import net.minecraft.util.Mth;
-import net.minecraft.world.phys.Vec3;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.world.entity.Entity;
-
-import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.MoverType;
-import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.network.PlayMessages;
-
+import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.util.SoundEvent;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.SoundEvents;
+import net.minecraft.item.Items;
+import net.minecraft.item.Item;
+import net.minecraft.block.Blocks;
+import net.minecraft.item.ItemStack;
+import net.minecraft.entity.ai.attributes.AttributeModifierMap;
+import net.minecraft.entity.ai.attributes.Attributes;
+import net.minecraft.entity.IRangedAttackMob;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.monster.IMob;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.AgeableEntity;
+import net.minecraft.entity.CreatureEntity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.MobEntity;
+import net.minecraft.entity.MoverType;
+import net.minecraft.entity.EntityType;
+import net.minecraftforge.fml.network.FMLPlayMessages;
+import net.minecraftforge.fml.network.NetworkHooks;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraft.world.entity.ai.goal.target.OwnerHurtByTargetGoal;
-import net.minecraft.world.entity.ai.goal.target.OwnerHurtTargetGoal;
-import net.minecraft.world.level.Explosion;
+import net.minecraft.entity.ai.goal.OwnerHurtByTargetGoal;
+import net.minecraft.entity.ai.goal.OwnerHurtTargetGoal;
+import net.minecraft.util.ActionResultType;
+import net.minecraft.particles.ParticleTypes;
+import net.minecraft.world.Explosion;
 import net.minecraftforge.fml.ModList;
-//import com.hungteen.pvz.common.entity.zombie.PVZZombieEntity;
-import net.minecraft.server.level.ServerLevel;
+import com.hungteen.pvz.common.entity.zombie.PVZZombieEntity;
+
 import advancearmy.AdvanceArmy;
 
 import advancearmy.event.SASoundEvent;
 import wmlib.common.living.PL_LandMove;
-
 import wmlib.common.living.WeaponVehicleBase;
 import wmlib.common.living.ai.VehicleLockGoal;
 import wmlib.common.living.ai.VehicleSearchTargetGoalSA;
 
-import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.SoundCategory;
 import wmlib.common.living.EntityWMSeat;
 
 import wmlib.common.network.PacketHandler;
 import wmlib.common.network.message.MessageVehicleAnim;
-import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.fml.network.PacketDistributor;
 import wmlib.client.obj.SAObjModel;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.ResourceLocation;
 
 import wmlib.common.living.PL_AirCraftMove;
 import wmlib.common.living.AI_AirCraftSet;
@@ -60,26 +65,24 @@ import wmlib.common.bullet.EntityFlare;
 import wmlib.WarMachineLib;
 
 import net.minecraft.world.DifficultyInstance;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.MobSpawnType;
-import net.minecraft.world.entity.SpawnGroupData;
-import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.IServerWorld;
+import net.minecraft.entity.ILivingEntityData;
+import net.minecraft.entity.SpawnReason;
+import net.minecraft.world.gen.Heightmap;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.NBTUtil;
 import wmlib.api.IArmy;
 import wmlib.api.ITool;
 import safx.SagerFX;
-import advancearmy.init.ModEntities;
-import wmlib.init.WMModEntities;
-import net.minecraft.world.level.chunk.LevelChunk; // 具体的区块实现
-import net.minecraft.world.level.chunk.ChunkAccess; // 区块访问接口
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.tags.BlockTags;
-import advancearmy.util.TargetSelect;
 import advancearmy.AAConfig;
+import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.tags.BlockTags;
+
+import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.server.ServerWorld;
+import net.minecraft.block.BlockState;
 public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArmy{
-	public EntitySA_AirBase(EntityType<? extends EntitySA_AirBase> sodier, Level worldIn) {
+	public EntitySA_AirBase(EntityType<? extends EntitySA_AirBase> sodier, World worldIn) {
 		super(sodier, worldIn);
 		this.lockAlertSound=SASoundEvent.laser_lock.get();
 		this.destroySoundStart=SASoundEvent.air_explosion.get();
@@ -89,20 +92,11 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 		this.armor_back = 8;
 		this.armor_top = 7;
 		this.armor_bottom = 6;
-		this.antibullet_0 = 0.2F;
-		this.antibullet_1 = 0.8F;
-		this.antibullet_2 = 1.5F;
-		this.antibullet_3 = 1.5F;
-		this.antibullet_4 = 2F;
 		this.seatProtect = 0.2F;
 		this.attack_height_max=100;
 	}
-
 	public int getUnitType(){
 		return 1;
-	}
-	public void stopUnitPassenger(){
-		this.stopPassenger();
 	}
 	public ResourceLocation getIcon1(){
 		return this.icon1tex;
@@ -110,17 +104,11 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 	public ResourceLocation getIcon2(){
 		return this.icon2tex;
 	}
-	public LivingEntity getLockTarget(){
-		return this.firstTarget;
+	public void stopUnitPassenger(){
+		this.stopPassenger();
 	}
 	public void setAttack(LivingEntity target){
 		this.setTarget(target);
-		if(target==null){
-			this.firstTarget=null;
-			this.clientTarget=null;
-		}else{
-			this.firstTarget=target;
-		}
 	}
 	public boolean choose = false;
 	public void setSelect(boolean stack){
@@ -168,16 +156,22 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 		this.goalSelector.addGoal(2, new VehicleLockGoal(this, true));
 		this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
 		this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
-		this.targetSelector.addGoal(1, new VehicleSearchTargetGoalSA<>(this, Mob.class, 10,false, (attackentity) -> {return this.CanAttack(attackentity);}));
-		this.targetSelector.addGoal(2, new VehicleSearchTargetGoalSA<>(this, Player.class, 10,false, (attackentity) -> {return this.CanAttack(attackentity);}));
+		this.targetSelector.addGoal(1, new VehicleSearchTargetGoalSA<>(this, MobEntity.class, 10, 120, false, (attackentity) -> {
+			return this.CanAttack(attackentity);}));
+		this.targetSelector.addGoal(2, new VehicleSearchTargetGoalSA<>(this, PlayerEntity.class, 10, 120, false, (attackentity) -> {
+			return this.CanAttack(attackentity);}));
 	}
 
     public boolean CanAttack(Entity entity){
 		if(entity instanceof LivingEntity && ((LivingEntity) entity).getHealth() > 0.0F && this.getTargetType()!=1){
 			if(this.getTargetType()==2){
-				return TargetSelect.mobCanAttack(this,entity,this.getTarget());
+				return !(entity instanceof IMob||entity instanceof ITool)||entity==this.getTarget()||entity==this.targetentity;
 			}else{
-				return entity instanceof Enemy;
+				if(ModList.get().isLoaded("pvz")){
+					return entity instanceof IMob||entity instanceof PVZZombieEntity;
+				}else{
+					return entity instanceof IMob;
+				}
 			}
     	}else{
 			return false;
@@ -195,7 +189,7 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
     protected SoundEvent getDeathSound()
     {
         return SoundEvents.IRON_GOLEM_DEATH;
-    }
+    }	
 
 	public float w1recoilp = 1;
 	public float w1recoilr = 1;
@@ -272,7 +266,7 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 	
     public void setAnimFire(int id)
     {
-        if(this != null && !this.level().isClientSide)
+        if(this != null && !this.level.isClientSide)
         {
             PacketHandler.getPlayChannel().send(PacketDistributor.TRACKING_ENTITY.with(() -> this), new MessageVehicleAnim(this.getId(), id));
         }
@@ -299,15 +293,16 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 	
 	protected void tickDeath() {
 		++this.deathTime;
+		this.setDeltaMovement(this.getDeltaMovement().x, this.getDeltaMovement().y, this.getDeltaMovement().z);
 		if (this.deathTime == 1){
 		  this.playSound(SASoundEvent.air_explosion.get(), 3.0F+this.getBbWidth()*0.1F, 1.0F);
-		  this.level().explode(this, this.getX(), this.getY(), this.getZ(), 3+this.getBbWidth()*0.1F, false, Level.ExplosionInteraction.NONE);
+		  this.level.explode(this, this.getX(), this.getY(), this.getZ(), 3+this.getBbWidth()*0.1F, false, Explosion.Mode.NONE);
 			if(ModList.get().isLoaded("safx"))SagerFX.proxy.createFX("VehicleExp1", null, this.getX(), this.getY(), this.getZ(), 0,0,0,1+this.getBbWidth()*0.1F);
 		}
-		if (this.deathTime >= 120||this.onGround()) {
-			this.discard(); //Forge keep data until we revive player
-			this.playSound(SASoundEvent.wreck_explosion.get(), 2.0F+this.getBbWidth()*0.1F, 1.0F);
-			this.level().explode(this, this.getX(), this.getY(), this.getZ(), 2+this.getBbWidth()*0.1F, false, Level.ExplosionInteraction.NONE);
+		if (this.deathTime >= 120||this.isOnGround()) {
+		 this.remove(); //Forge keep data until we revive player
+		 this.playSound(SASoundEvent.wreck_explosion.get(), 2.0F+this.getBbWidth()*0.1F, 1.0F);
+		 this.level.explode(this, this.getX(), this.getY(), this.getZ(), 2+this.getBbWidth()*0.1F, false, Explosion.Mode.NONE);
 			if(ModList.get().isLoaded("safx"))SagerFX.proxy.createFX("VehicleExp2", null, this.getX(), this.getY(), this.getZ(), 0,0,0,1+this.getBbWidth()*0.1F);
 		}
 	}
@@ -331,43 +326,45 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 	public int cracktime = 0;
 	public int random_height = 1;
 	int flarecd = 0;
+
+	/*@Override
+	public void remove() {
+		if (this.level instanceof ServerWorld) {
+			ServerWorld serverWorld = (ServerWorld) this.level;
+			BlockPos entityPos = new BlockPos(this.getX(), this.getY(), this.getZ());
+			int chunkX = entityPos.getX() >> 4;
+			int chunkZ = entityPos.getZ() >> 4;
+			int range = 2;
+			for (int x = chunkX - range; x <= chunkX + range; x++) {
+				for (int z = chunkZ - range; z <= chunkZ + range; z++) {
+					serverWorld.setChunkForced(x, z, false);
+				}
+			}
+		}
+		super.remove();
+	}*/
+	boolean flypower = true;
+	int drop = 0;
 	
-	public boolean onGround(){
-		return (this.getY()-this.block_height)<2;
-	}
-	
-	public int aiStartTime;
-	
-	public int drop = 0;
 	float moveyaw = 0;
 	float moveptich = 0;
 	public void tick() {
 		super.tick();
-		if(this.canAddPassenger(null)){
-			if (!this.level().isClientSide){
-				EntitySA_Seat seat = new EntitySA_Seat(ModEntities.ENTITY_SEAT.get(), this.level());
-				seat.moveTo(this.getX(), this.getY()+1, this.getZ(), 0, 0);
-				this.level().addFreshEntity(seat);
-				seat.startRiding(this);
-			}
-		}
-		
-		if(this.getTargetType()>1){
-			if (this.level() instanceof ServerLevel) {
-				ServerLevel serverLevel = (ServerLevel) this.level();
-				BlockPos entityPos = this.blockPosition();
+		if(this.getTargetType()==1){
+			if (this.level instanceof ServerWorld) {
+				ServerWorld serverWorld = (ServerWorld) this.level;
+				BlockPos entityPos = new BlockPos(this.getX(), this.getY(), this.getZ());
 				int chunkX = entityPos.getX() >> 4;
 				int chunkZ = entityPos.getZ() >> 4;
 				int range = 2;
 				for (int x = chunkX - range; x <= chunkX + range; x++) {
 					for (int z = chunkZ - range; z <= chunkZ + range; z++) {
-						serverLevel.setChunkForced(x, z, true);
+						serverWorld.setChunkForced(x, z, true);
 					}
 				}
 			}
 		}
-		
-		if(this.onGround() && this.getTargetType()!=1 && this.getHealth()>0){
+		if(this.isOnGround() && this.getTargetType()!=1 && this.getHealth()>0){
 			if(flyPitch<0)flyPitch+=0.5F;
 			if(flyPitch>0)flyPitch-=0.5F;
 			if(flyRoll<0)flyRoll+=0.5F;
@@ -375,36 +372,25 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 		}
 		
 		float f1 = this.yHeadRot * (2 * (float) Math.PI / 360);//
-		this.block_height = this.level().getHeight(
-                Heightmap.Types.WORLD_SURFACE, 
-                (int)Math.floor(this.getX()), 
-                (int)Math.floor(this.getZ())
-            );
+		this.block_height = this.level.getHeight(Heightmap.Type.WORLD_SURFACE, (int)this.getX(), (int)this.getZ());
 
 		float speed = this.MoveSpeed;
 		if(this.getAIType()!=4){
 			speed = this.MoveSpeed*1.5F;
 		}
-		if(this.drop<200)++this.drop;
+		if(drop<200)++drop;
+		if(this.getY()>120+block_height+this.fly_height)drop=0;
 		
-		if(this.getY()>120+block_height+this.fly_height && this.getTargetType()>0){
-			this.drop=0;
-			this.movePower=0;
-			this.throttle=0;
-		}
-		
-		if(fastFly && (this.getY()-this.block_height)>10 && this.movePower<10){
+		if(flypower&&(this.getY()-this.block_height)>10&&this.movePower<10){
 			this.movePower=10;
 			this.throttle=10;
 			this.drop = 200;
-			aiStartTime = 500;
-			fastFly=false;
+			flypower=false;
 		}
-
 		
-		/*if(this.drop>50||this.onGround()||this.getTargetType()==0)*/{
+		if(drop>80||this.isOnGround()||this.getTargetType()==0){
 			SoundEvent sound = this.movesound;
-			if(this.onGround()){
+			if(this.isOnGround()){
 				sound = SASoundEvent.air_ground.get();
 			}
 			if(this.isSpaceShip){
@@ -418,18 +404,25 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 			}
 		}
 		if(this.getHealth()>0){
-			
-			while(this.turretYaw1 - this.turretYawO1 < -180.0F) {
+			if(this.canAddPassenger(null)){
+				if (!this.level.isClientSide){
+					EntitySA_Seat seat = new EntitySA_Seat(AdvanceArmy.ENTITY_SEAT, this.level);
+					seat.moveTo(this.getX(), this.getY()+1, this.getZ(), 0, 0);
+					this.level.addFreshEntity(seat);
+					seat.startRiding(this);
+				}
+			}
+			while(this.turretYaw_1 - this.turretYawO1 < -180.0F) {
 				this.turretYawO1 -= 360.0F;
 			}
-			while(this.turretPitch1 - this.turretPitchO1 >= 180.0F) {
+			while(this.turretPitch_1 - this.turretPitchO1 >= 180.0F) {
 				this.turretPitchO1 += 360.0F;
 			}
-			this.turretYawO1 = this.turretYaw1;
-			this.turretPitchO1 = this.turretPitch1;
+			this.turretYawO1 = this.turretYaw_1;
+			this.turretPitchO1 = this.turretPitch_1;
 			
 			if(this.startTime==1 && this.startsound!=null)this.playSound(this.startsound, 5.0F, 1.0F);
-			if(this.getMovePosX()==0&&this.getMovePosZ()==0&&this.getTargetType()>1){
+			if(this.getMovePosX()==0&&this.getMovePosZ()==0&&this.getTargetType()!=1){
 				this.setMovePosX((int)this.getX());
 				this.setMovePosY((int)this.getY());
 				this.setMovePosZ((int)this.getZ());
@@ -441,21 +434,26 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 					this.playSound(SASoundEvent.jet_distant.get(), 2.0F,1);
 				}
 			}
+
+			if(this.getTargetType() == 1) 
+			{
+				if(this.movePower > 1)this.movePower = this.movePower - 0.05F;
+				if(this.throttle > 1)--this.throttle;
+			}
 			boolean fire1 = false;
 			boolean fire2 = false;
 			boolean fire4 = false;
 			float speedy = this.turnSpeed*0.8F+this.MoveSpeed*5;
 			float speedHeight = 1+this.MoveSpeed*5;
-			if (this.getFirstSeat() != null && this.getFirstSeat().getControllingPassenger()!=null) {
+			if (this.getFirstSeat() != null && this.getFirstSeat().getControllingPassenger()!=null){
 				if(cracktime<10)++cracktime;
-				if(this.onGround() && this.flyPitch>5/* && this.throttle>5*/){
+				if(this.isOnGround() && this.flyPitch>5){
 					if(cracktime>8){
 						cracktime = 0;
-						this.hurt(this.damageSources().explosion(null,null), this.flyPitch/12F*this.throttle);
+						this.hurt(DamageSource.explosion((LivingEntity)null), this.flyPitch*this.throttle);
 					}
 				}
-				EntitySA_Seat seat = (EntitySA_Seat)this.getFirstSeat();
-				Player player = (Player)seat.getControllingPassenger();
+				PlayerEntity player = (PlayerEntity)this.getFirstSeat().getAnyPassenger();
 				if(this.isSpaceShip){
 					if(this.getMoveMode()==0){
 						PL_AirCraftMove.moveFighterMode(player, this, this.MoveSpeed, this.turnSpeed);
@@ -468,7 +466,8 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 					PL_AirCraftMove.moveFighterMode(player, this, this.MoveSpeed, this.turnSpeed);
 				}
 				if(this.getTargetType()>0)this.setTargetType(0);//
-				{
+				if(this.getFirstSeat()!=null){
+					EntitySA_Seat seat = (EntitySA_Seat)this.getFirstSeat();
 					if(this.getMoveMode()==0){
 						if(this.getForwardMove()<0.1F && this.throttle>this.throttleMax*0.7F)--this.throttle;
 					}
@@ -543,31 +542,26 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 						seat.fire2 = false;
 					}
 				}
-				if(!this.onGround()){
+				if(!this.isOnGround()){
 					if(this.getArmyType1()==0){
-						if(this.movePower>5){
-							this.flyPitch += this.getMovePitch() * (this.turnSpeed*0.6F) * ((180F-Math.abs(this.flyRoll)*2)/180);
-							this.flyRoll -= this.getMoveYaw()*(1+this.turnSpeed);
-						}
-						this.setXRot(this.flyPitch);
-						this.turretPitch = this.getXRot();
+						this.flyPitch += this.getMovePitch() * (this.turnSpeed*0.6F) * ((180F-Math.abs(this.flyRoll)*2)/180);
+						this.flyRoll -= this.getMoveYaw()*(1+this.turnSpeed);
+						this.turretPitch = this.xRot = this.flyPitch;
 						this.turretYaw = this.yHeadRot;
 					}else{
 						if(this.enc_control>0||this.can_follow){
 							this.turretYaw=player.yHeadRot;
-							this.turretPitch=player.getXRot();
-							this.setYRot(this.yHeadRot);
-							this.moveyaw = this.getYRot();
-							float f4 = this.flyPitch - player.getXRot();
+							this.turretPitch=player.xRot;
+							this.moveyaw = this.yRot = this.yHeadRot;
+							float f4 = this.flyPitch - player.xRot;
 							if (f4 > speedy) {
 								this.flyPitch-=speedy;
 							} else if (f4 < -speedy) {
 								this.flyPitch+=speedy;
 							}else{
-								this.flyPitch = player.getXRot();
+								this.flyPitch = player.xRot;
 							}
-							this.setXRot(this.flyPitch);
-							this.moveptich = this.getXRot();
+							this.moveptich = this.xRot = this.flyPitch;
 							
 							float follow = player.yHeadRot;
 							follow = this.clampYaw(follow);
@@ -586,7 +580,6 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 					}
 				}
 			}else{
-				//player = null;
 				if(this.getTargetType()==0)this.setTargetType(1);//
 			}
 			if(flarecd<20)++flarecd;
@@ -607,14 +600,14 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 							}
 							double xx11 = 0;
 							double zz11 = 0;
-							xx11 -= Mth.sin(this.getYRot() * 0.01745329252F) * -2;
-							zz11 += Mth.cos(this.getYRot() * 0.01745329252F) * -2;
-							xx11 -= Mth.sin(this.getYRot() * 0.01745329252F + 1) * firex;
-							zz11 += Mth.cos(this.getYRot() * 0.01745329252F + 1) * firex;
-							EntityFlare bullet = new EntityFlare(WMModEntities.ENTITY_FLARE.get(), this.level());
-							bullet.moveTo(this.getX() + xx11, this.getY(), this.getZ() + zz11, this.getYRot(), this.getXRot());
-							bullet.shootFromRotation(this, -25, this.getYRot()+angle, 0, 1F, 1);
-							if (!this.level().isClientSide) this.level().addFreshEntity(bullet);
+							xx11 -= MathHelper.sin(this.yRot * 0.01745329252F) * -2;
+							zz11 += MathHelper.cos(this.yRot * 0.01745329252F) * -2;
+							xx11 -= MathHelper.sin(this.yRot * 0.01745329252F + 1) * firex;
+							zz11 += MathHelper.cos(this.yRot * 0.01745329252F + 1) * firex;
+							EntityFlare bullet = new EntityFlare(WarMachineLib.ENTITY_FLARE, this.level);
+							bullet.moveTo(this.getX() + xx11, this.getY(), this.getZ() + zz11, this.yRot, this.xRot);
+							bullet.shootFromRotation(this, -25, this.yRot+angle, 0, 1F, 1);
+							if (!this.level.isClientSide) this.level.addFreshEntity(bullet);
 							this.playSound(SoundEvents.LAVA_EXTINGUISH, 2.0F, 1.0F);
 							this.setRemain3(this.getRemain3() - 1);
 						}
@@ -634,37 +627,33 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 			if(this.control_tick<20)++this.control_tick;
 			if(this.getTargetType()>0){
 				if(cracktime<10)++cracktime;
-				if(this.onGround() && this.flyPitch>5/* && this.throttle>5*/){
+				if(this.isOnGround() && this.flyPitch>5/* && this.throttle>5*/){
 					if(cracktime>8){
 						cracktime = 0;
-						this.hurt(this.damageSources().explosion(null,null), 5);
+						this.hurt(DamageSource.explosion((LivingEntity)null), 5);
 					}
 				}
-				if (this.getFirstSeat() != null){
-					if(aiStartTime<500)++aiStartTime;
-					if(aiStartTime>450||this.hurtTime>0||fastFly||this.getOwner()!=null){
-						EntitySA_Seat seat = (EntitySA_Seat)this.getFirstSeat();
-						if(seat.getTargetType()==0&&this.enc_soul==0){
-							if(this.getTargetType()!=1)this.setTargetType(1);
-						}
-						if(seat.getTargetType()==2){
-							if(this.getTargetType()!=2)this.setTargetType(2);
-						}
-						if(seat.getTargetType()==3||this.enc_soul>0){
-							if(this.getTargetType()!=3)this.setTargetType(3);
-						}
+				if (this.getFirstSeat() != null) {
+					EntitySA_Seat seat = (EntitySA_Seat)this.getFirstSeat();
+					if(seat.getTargetType()==0&&this.enc_soul==0){
+						if(this.getTargetType()!=1)this.setTargetType(1);
+					}
+					if(seat.getTargetType()==2){
+						if(this.getTargetType()!=2)this.setTargetType(2);
+					}
+					if(seat.getTargetType()==3||this.enc_soul>0)if(this.getTargetType()!=3){
+						this.setTargetType(3);
 					}
 				}
 				if(this.getTargetType()>1){
 					if(this.can_follow){
-						this.setYRot(this.yHeadRot);
+						this.yRot = this.yHeadRot;
 					}else{
-						this.setYRot(this.yHeadRot);
-						this.turretYaw = this.getYRot();
+						this.turretYaw = this.yRot = this.yHeadRot;
 					}
 					if(this.getAIType()!=4)this.setForwardMove(1);
 					float heightY = block_height + this.random_height+this.fly_height;
-					float heightMin = block_height + this.min_height * speedHeight;
+					float heightMin = block_height +this.min_height*speedHeight;
 					if(this.getY() > heightY + 35){
 						if(!this.isAttacking())this.setAIType(3);
 					}
@@ -685,17 +674,12 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 							if(this.getAIType()!=4){
 								if(this.getY()<heightY - this.fly_height*0.3F||this.getY()<heightMin){
 									if(this.isAttacking()){
-										angle = -35;
+										angle = -50;
 									}else{
 										angle = -20;
 									}
 									//float xxx = (angle-this.flyPitch)*0.02F;
 									this.setMovePitch(angle);
-									if(this.throttle>19 && !this.isAttacking()){
-										this.setStrafingMove(1);
-									}else{
-										this.setStrafingMove(0);
-									}
 								}
 								if(this.getY()>heightY + this.fly_height*0.3F && !this.isAttacking()){
 									angle = 15;
@@ -733,23 +717,27 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 							
 							if(this.getMoveType()==0 && this.getOwner()!=null && followTime>30){
 								if(this.distanceTo(this.getOwner())>12){
-								this.setMovePosX((int)this.getOwner().getX());
-								this.setMovePosY((int)this.getOwner().getY());
-								this.setMovePosZ((int)this.getOwner().getZ());
+									this.setMovePosX((int)this.getOwner().getX());
+									this.setMovePosY((int)this.getOwner().getY());
+									this.setMovePosZ((int)this.getOwner().getZ());
 									followTime=0;
 								}
 							}
 							
-							if(this.getMovePosX()!=0 || this.getMovePosZ()!=0) {
+							if(this.getMovePosX()!=0 || this.getMovePosZ()!=0/* && this.getMovePosY()!=0*/) {
 								double dx = this.getMovePosX() - this.getX();
 								double dz = this.getMovePosZ() - this.getZ();
-								double dis = (double)Math.sqrt(dx * dx + dz * dz);
+								double dis = MathHelper.sqrt(dx * dx + dz * dz);
 								double min = this.stayrange;
 								if(this.getChoose()/*||this.getMoveType()==2||this.getMoveType()==4*/)min = 5;
+								/*if(dis > min){
+									if(!this.isAttacking()||this.getAIType()!=4)this.setAIType(3);
+								}*/
 								if(dis > min && (this.getAIType()!=1||!this.isAttacking()||this.getMoveType()==2||this.getMoveType()==4)) {
 									this.setAIType(2);
 									if(this.getAIType()==2 && this.getY()-this.block_height>this.fly_height*0.5F){
-										this.targetYaw = (float) Math.atan2(dz, dx) * (180F / (float) Math.PI) - 90.0f;
+										this.targetYaw = (float) MathHelper.atan2(dz, dx) * (180F / (float) Math.PI) - 90.0f;
+										//this.turretYaw = this.clampYaw(this.turretYaw);
 										this.targetYaw = this.clampYaw(this.targetYaw);
 										float f3 = this.yHeadRot - this.targetYaw;
 										f3 = this.clampYaw(f3);
@@ -759,6 +747,7 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 											this.setStrafingMove(-1);
 										}
 										if(f3 < this.turnSpeed*1.5F && f3 > -this.turnSpeed*1.5F){
+											//this.turretYaw = this.targetYaw;
 											this.setStrafingMove(0);
 										}
 									}
@@ -769,7 +758,7 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 									if(this.getAIType()!=4)this.setAIType(3);
 								}
 							}
-							if (this.getTarget() != null && this.movePower >= 5F && !this.onGround()) {
+							if (this.getTarget() != null && this.movePower >= 5F && !this.isOnGround()) {
 								LivingEntity target = this.getTarget();
 								if(target.isAlive() && target!=null){
 									aiChange();
@@ -781,12 +770,14 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 									double dis = Math.sqrt(dx * dx + dz * dz);
 									if(this.getAIType()==1&&dis>60 && this.getY()>heightMin+30*speedHeight-dis)this.setAIType(4);
 									float f11 = (float) (Math.atan2(dyy, dis) * 180.0D / Math.PI);
-									this.targetYaw = (float) Math.atan2(dz, dx) * (180F / (float) Math.PI) - 90.0f;
-									angle = f11;
+									this.targetYaw = (float) MathHelper.atan2(dz, dx) * (180F / (float) Math.PI) - 90.0f;
+									angle = /*this.xRot =*/ f11;
 									if(angle>89)angle = 89;
 									if(angle<-89)angle = -89;
+									//float xxx = (angle-this.flyPitch)*0.04F;
 									float aim = angle-this.flyPitch;
 									if(this.getAIType()==4 && this.getMoveType()!=2){
+										//this.turretYaw = this.clampYaw(this.turretYaw);
 										this.targetYaw = this.clampYaw(this.targetYaw);
 										float f3 = this.yHeadRot - this.targetYaw;
 										f3 = this.clampYaw(f3);
@@ -795,6 +786,7 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 										} else if (f3 < -this.turnSpeed * 1.5F) {
 											this.setStrafingMove(-1);
 										} else {
+											//this.turretYaw = this.targetYaw;
 											this.setStrafingMove(0);
 										}
 										this.setMovePitch(angle);
@@ -809,6 +801,7 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 									
 									float firediff = this.yHeadRot - this.targetYaw;
 									if(firediff>-this.turnSpeed*(15+w1aim)&&firediff<this.turnSpeed*(15+w1aim)){
+										//this.setStrafingMove(0);
 										if(aim<10+w1aim&&aim>-10-w1aim){
 											if(!w1aa && dis<w1max && target.getY()<w1min+this.getY()||w1aa && ddy<w1max && target.getY()>w1min+block_height)fire1 = true;
 										}
@@ -848,10 +841,12 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 							}
 						}
 					}else{
+						//this.setMovePitch(this.getMovePitch()*0.8F);
 						this.setMoveYaw(this.getMoveYaw()*0.8F);
 					}
+					//PL_AirCraftMove.moveFighterMode(null, this, this.MoveSpeed, this.turnSpeed);
 				}
-				if(this.movePower>5){
+				{
 					float f4 = this.flyPitch - this.getMovePitch();
 					if (f4 > speedy) {
 						this.flyPitch-=speedy;
@@ -861,17 +856,16 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 						this.flyPitch = this.getMovePitch();
 					}
 					if(this.can_follow){
-						this.setXRot(this.flyPitch);
+						this.xRot = this.flyPitch;
 					}else{
-						this.setXRot(this.flyPitch);
-						this.turretPitch = this.getXRot();
+						this.turretPitch = this.xRot = this.flyPitch;
 					}
 					this.flyRoll -= this.getMoveYaw()*(1+this.turnSpeed);
 				}
 			}
 			if(this.throttle >= 0){
 				if(this.movePower < this.throttle){
-					if( this.throttle > this.throttleMax*0.8F){
+					if( this.throttle > this.throttleMax-5){
 						this.movePower = this.movePower + this.thFrontSpeed;
 					}else{
 						this.movePower = this.movePower + this.thFrontSpeed*0.5F;
@@ -881,60 +875,36 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 				}
 				if(this.throttle <= 0 && this.movePower > 0)this.movePower = this.movePower + this.thBackSpeed * 2;
 			}
-
 			if (this.getForwardMove() > 0.0F) {
-				if(this.throttle < this.throttleMax)this.throttle+=1;
+				if(this.throttle < this.throttleMax)++this.throttle;
 			}
 			if (this.getForwardMove() < 0.0F) {
-				if(this.throttle >= 1)this.throttle-=1;
+				if(this.throttle >= 1)--this.throttle;
 			}
-			if(this.movePower>5){
-				if (this.getStrafingMove() < 0.0F) {
-					if(this.flyRoll < 50)this.flyRoll =  this.flyRoll + (float)(this.turnSpeed * 0.15F);
-					this.deltaRotation = this.deltaRotation + this.turnSpeed* (180F+this.flyRoll)/180F;
-				}
-				if (this.getStrafingMove() > 0.0F) {
-					if(this.flyRoll > -50)this.flyRoll = this.flyRoll - (float)(this.turnSpeed * 0.15F);
-					this.deltaRotation = this.deltaRotation - this.turnSpeed* (180F-this.flyRoll)/180F;
-				}
+			if (this.getStrafingMove() < 0.0F) {
+				if(this.flyRoll < 50)this.flyRoll =  this.flyRoll + (float)(this.turnSpeed * 0.15F);
+				this.deltaRotation = this.deltaRotation + this.turnSpeed* (180F+this.flyRoll)/180F;
+			}
+			if (this.getStrafingMove() > 0.0F) {
+				if(this.flyRoll > -50)this.flyRoll = this.flyRoll - (float)(this.turnSpeed * 0.15F);
+				this.deltaRotation = this.deltaRotation - this.turnSpeed* (180F-this.flyRoll)/180F;
 			}
 			//this.deltaRotation += this.getMovePitch() * -this.flyRoll/60F;
 			this.deltaRotation *= 0.9F;
 			if(this.deltaRotation > 20)this.deltaRotation = 20;
 			if(this.deltaRotation < -20)this.deltaRotation = -20;
-			sensitivityAdjust = 2f - (float)Math.exp(-2.0f * this.throttle) / (4.5f * (this.throttle + 0.1f));
-			sensitivityAdjust = Mth.clamp(sensitivityAdjust, 0.0f, 1.0f);
+			float sensitivityAdjust = 2f - (float)Math.exp(-2.0f * this.throttle) / (4.5f * (this.throttle + 0.1f));
+			sensitivityAdjust = MathHelper.clamp(sensitivityAdjust, 0.0f, 1.0f);
 			sensitivityAdjust *= 0.125F;
 			float yaw = this.deltaRotation * sensitivityAdjust;
 			this.yHeadRot += yaw;
 			this.yBodyRot += yaw;
-			this.setYRot(this.getYRot()+yaw);
+			this.yRot += yaw;
 			if(!this.can_follow){
 				this.turretYaw += yaw;
 				this.turretYawMove += yaw;
 			}
-			/*if(flarecd<20)++flarecd;
-			if(flarecd>2){
-				System.out.println("==================");
-				if(this.getTarget()!=null){
-					System.out.println("target="+this.getTarget().getName().getString());
-				}else{
-					System.out.println("target=null!!!!");
-				}
-				//System.out.println("this.getArmyType1()"+this.getArmyType1());
-				//System.out.println("this.getForwardMove()"+this.getForwardMove());
-				System.out.println("distanceToTarget"+this.dis);
-				System.out.println("minDistance"+this.min);
-				System.out.println("this.getStrafingMove()"+this.getStrafingMove());
-				System.out.println("this.turretPitch"+this.turretPitch);
-				System.out.println("this.getMoveType()"+this.getMoveType());
-				System.out.println("this.getAIType()"+this.getAIType());
-				System.out.println("this.targetYaw"+this.targetYaw);
-				System.out.println("this.turretYaw"+this.turretYaw);
-				System.out.println("this.yHeadRot"+this.yHeadRot);
-				System.out.println("------------------");
-				flarecd = 0;
-			}*/
+
 			
 			if(fire1||this.attack1){
 				if(this.getArmyType2()==0||this.getTargetType()>0){
@@ -987,17 +957,17 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 	
 	public void aiChange(){
 		if(this.isAttacking() && this.find_time<40)++this.find_time;
-		if(this.level().random.nextInt(6) > 3 && this.find_time > 20){
+		if(this.level.random.nextInt(6) > 3 && this.find_time > 20){
 			this.find_time = 0;
-			this.random_height = this.level().random.nextInt(6);
-			//this.setAIType(this.level().random.nextInt(5));
-		}else if(this.level().random.nextInt(6) < 3 && this.find_time > 20){
+			this.random_height = this.level.random.nextInt(6);
+			//this.setAIType(this.level.random.nextInt(5));
+		}else if(this.level.random.nextInt(6) < 3 && this.find_time > 20){
 			this.find_time = 0;
-			if(this.level().random.nextInt(6)<1){
-				this.random_height = this.level().random.nextInt(3);
+			if(this.level.random.nextInt(6)<1){
+				this.random_height = this.level.random.nextInt(3);
 				//this.setAIType(3);
 			}else{
-				this.random_height = -this.level().random.nextInt(3);
+				this.random_height = -this.level.random.nextInt(3);
 				//this.setAIType(4);
 			}
 		}
@@ -1005,49 +975,43 @@ public abstract class EntitySA_AirBase extends WeaponVehicleBase implements IArm
 	int crash = 0;
 	public void crashEnemy(){
 		if(crash<20)++crash;
-		if(AAConfig.vehicleDestroy && crash>10 && this.throttle>4){
+		if(crash>10 && this.throttle>4 && AAConfig.COMMON.spawn.vehicle_break_block.get()){
 			breakNearbyFragileBlocks();
 			crash=0;
 		}
 		if(this.tracktick % 5 == 0 && this.throttle>0){//
-			List<Entity> list = this.level().getEntities(this, this.getBoundingBox().inflate(2D));
+			List<Entity> list = this.level.getEntities(this, this.getBoundingBox().inflate(2D));
 			for(int k2 = 0; k2 < list.size(); ++k2) {
 				Entity attackentity = list.get(k2);
 				if(attackentity instanceof LivingEntity && ((LivingEntity)attackentity).getHealth()>0){
-					if(this.CanAttack(attackentity))attackentity.hurt(this.damageSources().thrown(this, this), this.getBbHeight()*this.getBbWidth()+10*(float)this.movePower);
+					if(this.CanAttack(attackentity))attackentity.hurt(DamageSource.thrown(this, this), this.getBbHeight()*this.getBbWidth()+this.throttle);
 				}
 			}
 		}
 	}
-	
-    private void breakNearbyFragileBlocks() {
-        if (!(this.level() instanceof ServerLevel serverLevel)) {
-            return;
-        }
-        //AABB expandedBoundingBox = this.getBoundingBox().inflate(1.0);
-		AABB expandedBoundingBox = (new AABB(
+	private void breakNearbyFragileBlocks() {
+		if (!(this.level instanceof ServerWorld)) {
+			return;
+		}
+		ServerWorld serverWorld = (ServerWorld) this.level;
+		AxisAlignedBB expandedBoundingBox = (new AxisAlignedBB(
 		this.getX()-this.getBbWidth(), this.getY()+2, this.getZ()-this.getBbWidth(), 
 		this.getX()+this.getBbWidth(), this.getY()+this.getBbHeight(), this.getZ()+this.getBbWidth())).inflate(1D);
-        // 你也可以用 .inflate(horizontal, vertical, horizontal) 分别控制各方向扩展
-        BlockPos.betweenClosedStream(expandedBoundingBox).forEach(pos -> {
-            BlockState state = serverLevel.getBlockState(pos);
-            if (state.isAir() || state.getDestroySpeed(serverLevel, pos) < 0) {
-                return;
-            }
-            boolean isFragile = state.is(BlockTags.LEAVES) // 所有树叶
-                    || state.is(BlockTags.FLOWERS) // 所有花
-                    || state.is(BlockTags.CROPS) // 所有农作物
-                    || state.is(BlockTags.REPLACEABLE) // 其他可替换方块（如草、雪）
-					//|| state.is(BlockTags.MUSHROOM_GROW_BLOCK)
-					|| state.is(BlockTags.PLANKS)
-					|| state.is(BlockTags.LOGS);
-            if (isFragile) {
-                // 参数解释：null 表示无实体原因（自然破坏），
-                // 若改为 this 则破坏算由此实体造成（可能影响战利品掉落等）。
-                // true 表示破坏后是否掉落物品，对于树叶通常为false，但这里我们设为true。
-                boolean dropItems = true;
-                serverLevel.destroyBlock(pos, dropItems, this);
-            }
-        });
-    }
+		
+		BlockPos.betweenClosedStream(expandedBoundingBox).forEach(pos -> {
+			BlockState state = serverWorld.getBlockState(pos);
+			if (state.isAir() || state.getDestroySpeed(serverWorld, pos) < 0) {
+				return;
+			}
+			boolean isFragile = state.is(BlockTags.LEAVES)
+					|| state.is(BlockTags.FLOWERS)
+					|| state.is(BlockTags.CROPS)
+					|| state.is(BlockTags.MUSHROOM_GROW_BLOCK)
+					|| state.is(BlockTags.LOGS)||state.is(BlockTags.PLANKS); // 添加了破坏原木
+			if (isFragile) {
+				boolean dropItems = true; // 对于树叶，你可能想设为 false 来防止掉落
+				serverWorld.destroyBlock(pos, dropItems, this); // null 表示无实体破坏者
+			}
+		});
+	}
 }

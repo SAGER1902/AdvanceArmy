@@ -1,26 +1,23 @@
 package advancearmy.entity.land;
 import net.minecraftforge.fml.ModList;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.network.PlayMessages;
+import net.minecraft.world.World;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.EntityType;
+import net.minecraftforge.fml.network.FMLPlayMessages;
 import wmlib.common.living.WeaponVehicleBase;
 import advancearmy.entity.ai.AI_EntityWeapon;
 import advancearmy.AdvanceArmy;
 import advancearmy.event.SASoundEvent;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import advancearmy.init.ModEntities;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import safx.SagerFX;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.ResourceLocation;
 import wmlib.client.obj.SAObjModel;
 import advancearmy.entity.EntitySA_LandBase;
-import net.minecraft.util.Mth;
+import net.minecraft.util.math.MathHelper;
 import advancearmy.entity.EntitySA_Seat;
-import net.minecraft.network.chat.Component;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.entity.player.PlayerEntity;
 public class EntitySA_T72 extends EntitySA_LandBase{
-	public EntitySA_T72(EntityType<? extends EntitySA_T72> sodier, Level worldIn) {
+	public EntitySA_T72(EntityType<? extends EntitySA_T72> sodier, World worldIn) {
 		super(sodier, worldIn);
 		seatPosX[0] = 1.07F;
 		seatPosY[0] = 1.1F;
@@ -38,8 +35,8 @@ public class EntitySA_T72 extends EntitySA_LandBase{
 		this.renderHudIcon = false;
 		this.renderHudOverlay = false;
 		this.renderHudOverlayZoom = false;
-		this.w1name = Component.translatable("advancearmy.weapon.125cannon.desc").getString();
-		this.w2name = Component.translatable("advancearmy.weapon.762gun.desc").getString();
+		this.w1name = new TranslationTextComponent("advancearmy.weapon.125cannon.desc").getString();
+		this.w2name = new TranslationTextComponent("advancearmy.weapon.762gun.desc").getString();
 		this.seatView1X = 0F;
 		this.seatView1Y = 0F;
 		this.seatView1Z = 0.01F;
@@ -58,7 +55,7 @@ public class EntitySA_T72 extends EntitySA_LandBase{
 		this.throttleMin = -4F;
 		this.thFrontSpeed = 0.3F;
 		this.thBackSpeed = -0.3F;
-		this.setMaxUpStep(1.5F);
+		this.maxUpStep = 1.5F;
 		this.armor_front = 55;
 		this.armor_side = 30;
 		this.armor_back = 30;
@@ -79,14 +76,14 @@ public class EntitySA_T72 extends EntitySA_LandBase{
 		this.fireposZ2 = 2.25F;
 		this.firebaseX = 0;
 		this.firebaseZ = 1.66F;
-		this.icon1tex = ResourceLocation.tryParse("advancearmy:textures/hud/t90head.png");
-		this.icon2tex = ResourceLocation.tryParse("advancearmy:textures/hud/t90body.png");
+		this.icon1tex = new ResourceLocation("advancearmy:textures/hud/t90head.png");
+		this.icon2tex = new ResourceLocation("advancearmy:textures/hud/t90body.png");
 		this.obj = new SAObjModel("advancearmy:textures/mob/t72b3.obj");
-		this.tex = ResourceLocation.tryParse("advancearmy:textures/mob/t72b3.png");
-		this.enemytex = ResourceLocation.tryParse("advancearmy:textures/mob/t72b3_ero.png");
+		this.tex = new ResourceLocation("advancearmy:textures/mob/t72b3.png");
+		this.enemytex = new ResourceLocation("advancearmy:textures/mob/t72b3_ero.png");
 		this.mgobj = new SAObjModel("advancearmy:textures/mob/kord.obj");
-		this.mgtex = ResourceLocation.tryParse("advancearmy:textures/mob/kord.png");
-		this.tracktex = ResourceLocation.tryParse("advancearmy:textures/mob/track.png");
+		this.mgtex = new ResourceLocation("advancearmy:textures/mob/kord.png");
+		this.tracktex = new ResourceLocation("advancearmy:textures/mob/track.png");
 		this.magazine = 1;
 		this.reload_time1 = 95;
 		this.reloadSound1 = SASoundEvent.reload_t90.get();
@@ -101,7 +98,7 @@ public class EntitySA_T72 extends EntitySA_LandBase{
 		this.movesound = SASoundEvent.move_track1.get();
 		
 		this.weaponCount = 4;
-		this.w1icon="wmlib:textures/hud/heat120mm.png";
+		this.w1icon="wmlib:textures/hud/heat125mm.png";
 		this.w2icon="wmlib:textures/hud/7.62mm.png";
 		this.w3icon="wmlib:textures/hud/cloud.png";
 		this.w4icon="wmlib:textures/hud/repair.png";
@@ -118,16 +115,10 @@ public class EntitySA_T72 extends EntitySA_LandBase{
 		this.setWheel(7,0, 1.06F, -3.74F);
 	}
 
-	public EntitySA_T72(PlayMessages.SpawnEntity packet, Level worldIn) {//
-		super(ModEntities.ENTITY_T72.get(), worldIn);
+	public EntitySA_T72(FMLPlayMessages.SpawnEntity packet, World worldIn) {//
+		super(AdvanceArmy.ENTITY_T72, worldIn);
 	}
-	public static AttributeSupplier.Builder createAttributes() {
-        return EntitySA_T72.createMobAttributes().add(Attributes.KNOCKBACK_RESISTANCE, (double) 10.0D)
-					.add(Attributes.MAX_HEALTH, 500.0D)
-					.add(Attributes.FOLLOW_RANGE, 50.0D)
-					.add(Attributes.ARMOR, (double) 15D);
-    }
-	
+
 	public void tick() {
 		super.tick();
 		if (this.getAnySeat(1) != null){//
@@ -143,9 +134,10 @@ public class EntitySA_T72 extends EntitySA_LandBase{
 				seat.seatHide = false;
 				seat.ridding_rotemgPitch = true;
 				seat.attack_range_max = 35;
+				seat.attack_height_max = 75;
 				seat.weaponCount = 1;
 				seat.ammo1 = 4;
-				seat.w1name = Component.translatable("advancearmy.weapon.127gun.desc").getString();
+				seat.w1name = new TranslationTextComponent("advancearmy.weapon.127gun.desc").getString();
 				seat.magazine = 100;
 				seat.reload_time1 = 80;
 				seat.reloadSound1 = SASoundEvent.reload_mag.get();
@@ -154,16 +146,16 @@ public class EntitySA_T72 extends EntitySA_LandBase{
 				10, 6F, 1.25F, 1, false, 1, 0.01F, 20, 0);
 			}
 			//render
-			this.turretYaw1=seat.getYHeadRot();
-			if(seat.turretPitch<15)this.turretPitch1=seat.turretPitch;
-			while(this.turretYaw1 - this.turretYawO1 < -180.0F) {
+			this.turretYaw_1=seat.getYHeadRot();
+			if(seat.turretPitch<15)this.turretPitch_1=seat.turretPitch;
+			while(this.turretYaw_1 - this.turretYawO1 < -180.0F) {
 				this.turretYawO1 -= 360.0F;
 			}
-			while(this.turretPitch1 - this.turretPitchO1 >= 180.0F) {
+			while(this.turretPitch_1 - this.turretPitchO1 >= 180.0F) {
 				this.turretPitchO1 += 360.0F;
 			}
-			this.turretYawO1 = this.turretYaw1;
-			this.turretPitchO1 = this.turretPitch1;
+			this.turretYawO1 = this.turretYaw_1;
+			this.turretPitchO1 = this.turretPitch_1;
 			
 			if(seat.getRemain1()>0){
 				ammo = true;
@@ -191,8 +183,8 @@ public class EntitySA_T72 extends EntitySA_LandBase{
 		}else{
 			this.firesound2=SASoundEvent.fire_ruvg_3p.get();
 		}
-		if (this.getFirstSeat() != null && this.getFirstSeat().getControllingPassenger()!=null) {
-			if (this.getFirstSeat() != null){
+		if (this.getFirstSeat() != null && this.getFirstSeat().getControllingPassenger()!=null){
+			if (this.getFirstSeat() != null) {
 				EntitySA_Seat seat = (EntitySA_Seat)this.getFirstSeat();
 				if(seat.keyv){
 					if(cooltime3>150)cooltime3=0;
@@ -229,7 +221,7 @@ public class EntitySA_T72 extends EntitySA_LandBase{
 		String fx1 = "AdvTankFire";
 		String fx2 = null;//SAAPTrail
 		LivingEntity shooter = this;
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
 		AI_EntityWeapon.Attacktask(this, shooter, this.getTarget(), 3, model, tex, fx1, fx2, firesound1,
 		1F, this.fireposX1,this.fireposY1,this.fireposZ1,this.firebaseX,this.firebaseZ,
 		this.getX(), this.getY(), this.getZ(),this.turretYaw, this.turretPitch,
@@ -241,7 +233,7 @@ public class EntitySA_T72 extends EntitySA_LandBase{
 		String fx1 = "SmokeGun";
 		String fx2 = null;
 		LivingEntity shooter = this;
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
 		AI_EntityWeapon.Attacktask(this, shooter, this.getTarget(), 0, model, tex, fx1, fx2, firesound2,
 		1F, this.fireposX2,this.fireposY2,this.fireposZ2,this.firebaseX,this.firebaseZ,
 		this.getX(), this.getY(), this.getZ(),this.turretYaw, this.turretPitch,

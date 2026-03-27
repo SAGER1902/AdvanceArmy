@@ -1,26 +1,25 @@
 package advancearmy.entity.air;
-import advancearmy.init.ModEntities;
+
 import net.minecraftforge.fml.ModList;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.network.PlayMessages;
+import net.minecraft.world.World;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.EntityType;
+import net.minecraftforge.fml.network.FMLPlayMessages;
 import wmlib.common.living.WeaponVehicleBase;
 import advancearmy.entity.ai.AI_EntityWeapon;
 import advancearmy.AdvanceArmy;
 import advancearmy.event.SASoundEvent;
 import safx.SagerFX;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.ResourceLocation;
 import wmlib.client.obj.SAObjModel;
 import advancearmy.entity.EntitySA_HeliBase;
-import net.minecraft.util.Mth;
+import net.minecraft.util.math.MathHelper;
 import advancearmy.entity.EntitySA_Seat;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.entity.player.PlayerEntity;
+
 public class EntitySA_AH6 extends EntitySA_HeliBase{
-	public EntitySA_AH6(EntityType<? extends EntitySA_AH6> sodier, Level worldIn) {
+	public EntitySA_AH6(EntityType<? extends EntitySA_AH6> sodier, World worldIn) {
 		super(sodier, worldIn);
 		seatTurret[1] = false;
 		VehicleType = 3;
@@ -28,7 +27,7 @@ public class EntitySA_AH6 extends EntitySA_HeliBase{
 		this.renderHudOverlay = false;
 		this.renderHudOverlayZoom = false;
 		this.icon1tex = null;
-		this.icon2tex = ResourceLocation.tryParse("advancearmy:textures/hud/ah6icon.png");
+		this.icon2tex = new ResourceLocation("advancearmy:textures/hud/ah6icon.png");
 		this.seatView1X = 0F;
 		this.seatView1Y = 0F;
 		this.seatView1Z = 0.01F;
@@ -103,37 +102,33 @@ public class EntitySA_AH6 extends EntitySA_HeliBase{
 		this.rotor_rotex[1]=10;
 		this.setRotor(0,0, 0, -1.03F);
 		this.setRotor(1,0, 2.72F, -7.34F);
-		this.rotortex1 = ResourceLocation.tryParse("advancearmy:textures/mob/ah6rotor.png");
-		this.rotortex2 = ResourceLocation.tryParse("advancearmy:textures/mob/ah6rotor2.png");
+		this.rotortex1 = new ResourceLocation("advancearmy:textures/mob/ah6rotor.png");
+		this.rotortex2 = new ResourceLocation("advancearmy:textures/mob/ah6rotor2.png");
 		this.weaponCount = 4;
 		this.w1icon="advancearmy:textures/hud/m134.png";
 		this.w2icon="advancearmy:textures/hud/hy70.png";
 		this.w3icon="wmlib:textures/hud/flare.png";
 		this.w4icon="wmlib:textures/hud/repair.png";
 	}
-	public EntitySA_AH6(PlayMessages.SpawnEntity packet, Level worldIn) {
-		super(ModEntities.ENTITY_AH6.get(), worldIn);
+	public EntitySA_AH6(FMLPlayMessages.SpawnEntity packet, World worldIn) {
+		super(AdvanceArmy.ENTITY_AH6, worldIn);
 	}
-	
-	public static AttributeSupplier.Builder createAttributes() {
-        return EntitySA_AH6.createMobAttributes();
-    }
-	
+
 	public void weaponActive1(){
 		String model = "advancearmy:textures/entity/bullet/bullet12.7.obj";
 		String tex = "advancearmy:textures/entity/bullet/bullet12.7.png";
 		String fx1 = "SmokeGun";
 		String fx2 = null;
 		LivingEntity shooter = this;
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
 		AI_EntityWeapon.Attacktask(this, shooter, this.getTarget(), 0, model, tex, fx1, fx2, firesound1,
-		1.57F, this.fireposX1,this.fireposY1,this.fireposZ1,this.firebaseY,this.firebaseZ,
-		this.getX(), this.getY(), this.getZ(),this.getYRot(), this.turretPitch,
+		1.57F, this.fireposX1,this.fireposY1,this.fireposZ1,this.firebaseX,this.firebaseZ,
+		this.getX(), this.getY(), this.getZ(),this.yRot, this.turretPitch,
 		5, 4F, 3F, 1, false, 1, 0.001F, 50, 0);
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
 		AI_EntityWeapon.Attacktask(this, shooter, this.getTarget(), 0, model, tex, fx1, fx2, firesound1,
-		-1.57F, this.fireposX1,this.fireposY1,this.fireposZ1,this.firebaseY,this.firebaseZ,
-		this.getX(), this.getY(), this.getZ(),this.getYRot(), this.turretPitch,
+		-1.57F, this.fireposX1,this.fireposY1,this.fireposZ1,this.firebaseX,this.firebaseZ,
+		this.getX(), this.getY(), this.getZ(),this.yRot, this.turretPitch,
 		8, 4F, 3F, 1, false, 1, 0.001F, 50, 0);
 	}
 	public void weaponActive2(){
@@ -148,10 +143,10 @@ public class EntitySA_AH6 extends EntitySA_HeliBase{
 		String fx1 = "SmokeGun";
 		String fx2 = "SAMissileTrail";
 		LivingEntity shooter = this;
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
 		AI_EntityWeapon.Attacktask(this, shooter, this.getTarget(), 3, model, tex, fx1, fx2, firesound2,
-		side, this.fireposX2,this.fireposY2,this.fireposZ2,this.firebaseY,this.firebaseZ,
-		this.getX(), this.getY(), this.getZ(),this.getYRot(), this.turretPitch,
+		side, this.fireposX2,this.fireposY2,this.fireposZ2,this.firebaseX,this.firebaseZ,
+		this.getX(), this.getY(), this.getZ(),this.yRot, this.turretPitch,
 		45, 3F, 1.1F, 2, false, 1, 0.001F, 50, 3);
 	}
 }

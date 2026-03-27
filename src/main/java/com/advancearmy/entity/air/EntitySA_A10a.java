@@ -1,27 +1,26 @@
 package advancearmy.entity.air;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
+
 import net.minecraftforge.fml.ModList;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.network.PlayMessages;
+import net.minecraft.world.World;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.EntityType;
+import net.minecraftforge.fml.network.FMLPlayMessages;
 import wmlib.common.living.WeaponVehicleBase;
 import advancearmy.entity.ai.AI_EntityWeapon;
 import advancearmy.AdvanceArmy;
 import advancearmy.event.SASoundEvent;
-import advancearmy.init.ModEntities;
-import net.minecraft.resources.ResourceLocation;
+
+import net.minecraft.util.ResourceLocation;
 import wmlib.client.obj.SAObjModel;
 import advancearmy.entity.EntitySA_AirBase;
-import net.minecraft.util.Mth;
+import net.minecraft.util.math.MathHelper;
 import advancearmy.entity.EntitySA_Seat;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.entity.player.PlayerEntity;
 import safx.util.EntityCondition;
 import safx.SagerFX;
 public class EntitySA_A10a extends EntitySA_AirBase{
-	public EntitySA_A10a(EntityType<? extends EntitySA_A10a> sodier, Level worldIn) {
+	public EntitySA_A10a(EntityType<? extends EntitySA_A10a> sodier, World worldIn) {
 		super(sodier, worldIn);
 		seatPosX[0] = 0;
 		seatPosY[0] = 2F;
@@ -36,7 +35,7 @@ public class EntitySA_A10a extends EntitySA_AirBase{
 		this.canNightV=true;
 		VehicleType = 4;
 		this.icon1tex = null;
-		this.icon2tex = ResourceLocation.tryParse("advancearmy:textures/hud/a10icon.png");
+		this.icon2tex = new ResourceLocation("advancearmy:textures/hud/a10icon.png");
 		this.seatView1X = 0F;
 		this.seatView1Y = 0F;
 		this.seatView1Z = 0.01F;
@@ -48,7 +47,7 @@ public class EntitySA_A10a extends EntitySA_AirBase{
 		
         this.MoveSpeed = 0.038F;
         this.turnSpeed = 2F;
-		this.setMaxUpStep(1.5F);
+		this.maxUpStep = 1.5F;
 		this.flyPitchMax = 90F;
 		this.flyPitchMin = -90F;
         this.throttleMax = 20F;
@@ -73,10 +72,10 @@ public class EntitySA_A10a extends EntitySA_AirBase{
 		this.min_height = 15;
 		
 		this.obj = new SAObjModel("advancearmy:textures/mob/a10a.obj");
-		this.tex = ResourceLocation.tryParse("advancearmy:textures/mob/a10us.png");
+		this.tex = new ResourceLocation("advancearmy:textures/mob/a10us.png");
 		
-		this.w1tex = ResourceLocation.tryParse("advancearmy:textures/entity/bullet/hy70.png");
-		this.w4tex = ResourceLocation.tryParse("advancearmy:textures/entity/bullet/mk82a.png");
+		this.w1tex = new ResourceLocation("advancearmy:textures/entity/bullet/hy70.png");
+		this.w4tex = new ResourceLocation("advancearmy:textures/entity/bullet/mk82a.png");
 		
 		this.reloadSound1 = SASoundEvent.bomb_reload.get();
 		this.reloadSound2 = SASoundEvent.reload_chaingun.get();
@@ -115,36 +114,30 @@ public class EntitySA_A10a extends EntitySA_AirBase{
 		this.w4name = "MK82航空炸弹";
 	}
 
-	public EntitySA_A10a(PlayMessages.SpawnEntity packet, Level worldIn) {
-		super(ModEntities.ENTITY_A10A.get(), worldIn);
+	public EntitySA_A10a(FMLPlayMessages.SpawnEntity packet, World worldIn) {
+		super(AdvanceArmy.ENTITY_A10A, worldIn);
 	}
-	public static AttributeSupplier.Builder createAttributes() {
-        return EntitySA_A10a.createMobAttributes().add(Attributes.KNOCKBACK_RESISTANCE, (double) 10.0D)
-					.add(Attributes.MAX_HEALTH, 300.0D)
-					.add(Attributes.FOLLOW_RANGE, 200.0D)
-					.add(Attributes.ARMOR, (double) 8D);
-    }
+
 	int attack_start = 0;
 	boolean trail = false;
 	public void tick() {
 		super.tick();
 		if(this.getHealth()>0){
-			if(!this.onGround() && this.getMovePitch()<-1F && this.movePower>10){
+			/*if(!this.isOnGround() && (this.getMovePitch()>0.1F||this.getMovePitch()<-0.1F||this.getMoveYaw()>0.1F||this.getMoveYaw()<-0.1F)){
 				if(!trail){
 					if(ModList.get().isLoaded("safx")){
-						if(this.level().isClientSide)SagerFX.proxy.createFXOnEntityWithOffset("PlaneTrail", this, 9f, -2.2f, -5.0f, true, EntityCondition.ENTITY_PLANE);
-						if(this.level().isClientSide)SagerFX.proxy.createFXOnEntityWithOffset("PlaneTrail", this, -9f, -2.2f, -5.0f, true, EntityCondition.ENTITY_PLANE);
+						if(this.level.isClientSide)SagerFX.proxy.createFXOnEntityWithOffset("PlaneTrail", this, 9f, -2.2f, -5.0f, true, EntityCondition.ENTITY_PLANE);
+						if(this.level.isClientSide)SagerFX.proxy.createFXOnEntityWithOffset("PlaneTrail", this, -9f, -2.2f, -5.0f, true, EntityCondition.ENTITY_PLANE);
 					}
 					trail = true;
 				}
 			}else{
 				if(trail)trail = false;
-			}
+			}*/
 			
 			if(this.getMoveMode()==5){
 				this.movePower = throttleMax;
 				this.throttle = throttleMax;
-				this.drop = 200;
 				++attack_start;
 				if(attack_start==1)this.setMovePitch(50);
 				if(attack_start>30 && attack_start<100){
@@ -165,7 +158,7 @@ public class EntitySA_A10a extends EntitySA_AirBase{
 					this.setArmyType2(this.getArmyType2()-1);
 				}else{
 					this.removePassenger();
-					this.discard();
+					this.remove();
 				}
 			}
 		}
@@ -181,20 +174,20 @@ public class EntitySA_A10a extends EntitySA_AirBase{
 		String model = "advancearmy:textures/entity/bullet/bulletrocket.obj";
 		String tex = "advancearmy:textures/entity/bullet/bulletrocket.png";
 		LivingEntity shooter = this;
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
 		AI_EntityWeapon.Attacktask(this, shooter, null, 3, model, tex, null, "RocketTrail", firesound1,
 		1F, fireX,0,0,1.53F,-2.89F,
-		this.getX(), this.getY(), this.getZ(),this.getYRot(), this.turretPitch,
+		this.getX(), this.getY(), this.getZ(),this.yRot, this.turretPitch,
 		50, 3F, 1.1F, 5, false, 1, 0.001F, 500, 3);
 	}
 	public void weaponActive2(){
 		String model = "advancearmy:textures/entity/bullet/bullet30mm.obj";
 		String tex = "advancearmy:textures/entity/bullet/bullet1.png";
 		LivingEntity shooter = this;
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
 		AI_EntityWeapon.Attacktask(this, shooter, null, 3, model, tex, null, null, firesound2,
 		1F, this.fireposX2,this.seatPosY[0],this.fireposZ2,this.firebaseX,this.firebaseZ,
-		this.getX(), this.getY(), this.getZ(),this.getYRot(), this.turretPitch,
+		this.getX(), this.getY(), this.getZ(),this.yRot, this.turretPitch,
 		35, 8F, 1.5F, 1, false, 1, 0.01F, 50, 0);
 	}
 	public void weaponActive4(){
@@ -207,10 +200,10 @@ public class EntitySA_A10a extends EntitySA_AirBase{
 		String model = "advancearmy:textures/entity/bullet/mk82a.obj";
 		String tex = "advancearmy:textures/entity/bullet/mk82a.png";
 		LivingEntity shooter = this;
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
 		AI_EntityWeapon.Attacktask(this, shooter, null, 3, model, tex, null, null, firesound4,
 		1F, fireX,0,0,0.53F,-2.89F,
-		this.getX(), this.getY(), this.getZ(),this.getYRot(), this.turretPitch,
+		this.getX(), this.getY(), this.getZ(),this.yRot, this.turretPitch,
 		120, 1.5F, 1.1F, 7, false, 1, 0.02F, 500, 3);
 	}
 }

@@ -7,107 +7,131 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.function.Predicate;
 import javax.annotation.Nullable;
-import net.minecraft.world.level.Level;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageTypes;
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.scores.Team;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtUtils;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.TamableAnimal;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Item;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.item.Items;
-import net.minecraft.network.chat.Component;
-import net.minecraft.util.Mth;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
+import net.minecraft.entity.CreatureAttribute;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntitySize;
+import net.minecraft.entity.EntitySpawnPlacementRegistry;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.ILivingEntityData;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.Pose;
+import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.ai.attributes.AttributeModifier;
+import net.minecraft.entity.ai.attributes.AttributeModifierMap;
+import net.minecraft.entity.ai.attributes.Attributes;
+import net.minecraft.entity.ai.attributes.ModifiableAttributeInstance;
 
-import advancearmy.event.SASoundEvent;
-import advancearmy.item.ItemSpawn;
-import advancearmy.item.ItemCapture;
-import advancearmy.item.ItemRemove;
-
+import net.minecraft.entity.merchant.villager.AbstractVillagerEntity;
+import net.minecraft.entity.merchant.villager.VillagerEntity;
+import net.minecraft.entity.passive.ChickenEntity;
+import net.minecraft.entity.passive.IronGolemEntity;
+import net.minecraft.entity.passive.TurtleEntity;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.inventory.EquipmentSlotType;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.NBTDynamicOps;
+import net.minecraft.network.datasync.DataParameter;
+import net.minecraft.network.datasync.DataSerializers;
+import net.minecraft.network.datasync.EntityDataManager;
+import net.minecraft.pathfinding.GroundPathNavigator;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.util.DamageSource;
+import net.minecraft.util.EntityPredicates;
+import net.minecraft.util.GroundPathHelper;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.SoundEvent;
+import net.minecraft.util.SoundEvents;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.world.Difficulty;
+import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.GameRules;
+import net.minecraft.world.IServerWorld;
+import net.minecraft.world.IWorld;
+import net.minecraft.world.World;
+import net.minecraft.world.server.ServerWorld;
+import net.minecraft.world.spawner.WorldEntitySpawner;
+import net.minecraft.entity.monster.IMob;
+import net.minecraft.entity.MobEntity;
 import advancearmy.AdvanceArmy;
-import advancearmy.init.ModEntities;
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.Style;
+import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.ActionResultType;
+import net.minecraft.util.Hand;
+import net.minecraft.item.Item;
 
-import wmlib.api.IBuilding;
+import net.minecraftforge.fml.network.FMLPlayMessages;
+import net.minecraftforge.fml.network.NetworkHooks;
+
+import net.minecraft.entity.CreatureEntity;
+
+import net.minecraft.world.server.ServerBossInfo;
+import net.minecraft.world.BossInfo;
+
 import wmlib.api.IEnemy;
-import wmlib.api.ITool;
+import net.minecraft.entity.player.ServerPlayerEntity;
+import wmlib.common.living.WeaponVehicleBase;
+import advancearmy.entity.EntitySA_LandBase;
+import advancearmy.event.SASoundEvent;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.text.StringTextComponent;
+
+import net.minecraft.potion.Effects;
+import net.minecraft.potion.EffectInstance;
 import wmlib.api.IHealthBar;
 import wmlib.api.IArmy;
-import wmlib.common.living.EntityWMVehicleBase;
-import wmlib.common.living.WeaponVehicleBase;
-
-import net.minecraft.world.scores.PlayerTeam;
-import net.minecraft.world.scores.Team;
-import net.minecraft.core.Direction;
-import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
+import net.minecraft.scoreboard.Team;
+import net.minecraft.scoreboard.ScorePlayerTeam;
+import net.minecraft.util.Direction;
+import net.minecraft.network.play.server.SDestroyEntitiesPacket;
 import advancearmy.entity.EntitySA_SoldierBase;
+import advancearmy.item.ItemRemove;
 public class InteractSoldier{
-	public static InteractionResult interactSoldier(EntitySA_SoldierBase soldier, Player player, InteractionHand hand) {
+	public static ActionResultType interactSoldier(EntitySA_SoldierBase soldier, PlayerEntity player, Hand hand) {
 		ItemStack heldItem = player.getItemInHand(hand);
+		ItemStack this_heldItem = soldier.getMainHandItem();
 		Item item = heldItem.getItem();
-		boolean have = true;
-		if(heldItem!=null && !heldItem.isEmpty()){
-			if(soldier.getOwner()==null&&item == Items.GOLD_INGOT){
-				have=false;
-				soldier.tame(player);
-				player.sendSystemMessage(Component.translatable("Ok, I'll follow you"));
-				heldItem.shrink(1);
-				return InteractionResult.SUCCESS;
-			}
-			if(item instanceof ItemCapture){
-				have=false;
-				return InteractionResult.PASS;
-			}
-			if(item instanceof ItemRemove && soldier.getOwner()==player){
-				have=false;
-				player.playSound(SoundEvents.ANVIL_DESTROY,1F,1F);
-				if(!soldier.level().isClientSide){
-					soldier.discard();
-					if (player instanceof ServerPlayer) {
-						((ServerPlayer) player).connection.send(new ClientboundRemoveEntitiesPacket(soldier.getId()));
-					}
-					return InteractionResult.SUCCESS;
-				}
-				if(soldier.level().isClientSide)player.sendSystemMessage(Component.translatable("Remvoed"));
-				return InteractionResult.SUCCESS;
-			}
+		if(soldier.getOwner()==null&&item == Items.GOLD_INGOT && heldItem!=null && !heldItem.isEmpty()){
+			soldier.tame(player);
+			player.sendMessage(new TranslationTextComponent("Ok, I'll follow you", new Object[0]), player.getUUID());
+			heldItem.shrink(1);
+			return ActionResultType.PASS;
 		}
-		if((player.isCreative()||player == soldier.getOwner()) && have){
+		if(item instanceof ItemRemove && soldier.getOwner()==player){
+			player.playSound(SoundEvents.ANVIL_DESTROY,1F,1F);
+			if(!soldier.level.isClientSide){
+				soldier.remove();
+				if (player instanceof ServerPlayerEntity) {
+					((ServerPlayerEntity) player).connection.send(new SDestroyEntitiesPacket(soldier.getId()));
+				}
+				return ActionResultType.SUCCESS;
+			}
+			if(soldier.level.isClientSide)player.sendMessage(new TranslationTextComponent("Remvoed", new Object[0]), player.getUUID());
+			return ActionResultType.SUCCESS;
+		}
+		if(player.isCreative()||player == soldier.getOwner()){
 			if(soldier.getMoveType() == 1) {
-				if(soldier.level().isClientSide)player.sendSystemMessage(Component.translatable("Follow me!"));
 				soldier.setMoveType(0);
 				soldier.setRemain2(0);
-				return InteractionResult.SUCCESS;
-			}else if(soldier.getMoveType() == 0) {
-				if(soldier.level().isClientSide)player.sendSystemMessage(Component.translatable("Stay!"));
+				return ActionResultType.PASS;
+			}
+			else if(soldier.getMoveType() == 0) {
 				soldier.setMoveType(3);
 				soldier.setRemain2(2);
-				return InteractionResult.SUCCESS;
-			}else if(soldier.getMoveType() == 3) {
-				if(soldier.level().isClientSide)player.sendSystemMessage(Component.translatable("Free Attack!"));
+				return ActionResultType.PASS;
+			}
+			else if(soldier.getMoveType() == 3) {
 				soldier.setMoveType(1);
 				soldier.setRemain2(0);
-				return InteractionResult.SUCCESS;
+				return ActionResultType.PASS;
 			}
 		}
-		return InteractionResult.PASS;
-	}
+		return ActionResultType.PASS;
+    }
 }

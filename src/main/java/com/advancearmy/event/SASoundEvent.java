@@ -1,13 +1,18 @@
 package advancearmy.event;
 
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.sounds.SoundEvent;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.SoundEvent;
+import net.minecraftforge.event.RegistryEvent;
+
+import net.minecraftforge.fml.RegistryObject;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
+
+import net.minecraft.util.registry.Registry;
+
 import advancearmy.AdvanceArmy;
 public class SASoundEvent {
-	public static final DeferredRegister<SoundEvent> REGISTER = DeferredRegister.create(ForgeRegistries.SOUND_EVENTS, AdvanceArmy.MODID);
+	public static final DeferredRegister<SoundEvent> REGISTER = DeferredRegister.create(ForgeRegistries.SOUND_EVENTS, AdvanceArmy.MOD_ID);
 	public static final RegistryObject<SoundEvent> maopao = registerSound("advancearmy.maopao");
 	public static final RegistryObject<SoundEvent> laser16 = registerSound("advancearmy.laser16");
 	public static final RegistryObject<SoundEvent> laser10 = registerSound("advancearmy.laser10");
@@ -22,19 +27,9 @@ public class SASoundEvent {
 	public static final RegistryObject<SoundEvent> gun2 = registerSound("advancearmy.gun2");
 	public static final RegistryObject<SoundEvent> gun1 = registerSound("advancearmy.gun1");
 	public static final RegistryObject<SoundEvent> fire_flame = registerSound("advancearmy.fire_flame");
-	public static final RegistryObject<SoundEvent> box_heal = registerSound("advancearmy.box_heal");
-	public static final RegistryObject<SoundEvent> mirage_fire = registerSound("advancearmy.mirage_fire");
-	
-	public static final RegistryObject<SoundEvent> mirage_move = registerSound("advancearmy.mirage_move");
-	
-	public static final RegistryObject<SoundEvent> mwdronef = registerSound("advancearmy.mwdronef");
-	public static final RegistryObject<SoundEvent> stapcf = registerSound("advancearmy.stapcf");
-	
-	public static final RegistryObject<SoundEvent> nuke2_exp = registerSound("advancearmy.nuke2_exp");
-	public static final RegistryObject<SoundEvent> nuke2_rad = registerSound("advancearmy.nuke2_rad");
-
 	public static final RegistryObject<SoundEvent> moqiuli = registerSound("advancearmy.moqiuli");
-
+	public static final RegistryObject<SoundEvent> box_heal = registerSound("advancearmy.box_heal");
+	
 	public static final RegistryObject<SoundEvent> fs_say = registerSound("advancearmy.fs_say");
 	public static final RegistryObject<SoundEvent> fs_hurt = registerSound("advancearmy.fs_hurt");
 	public static final RegistryObject<SoundEvent> fs_die = registerSound("advancearmy.fs_die");
@@ -43,7 +38,7 @@ public class SASoundEvent {
 	public static final RegistryObject<SoundEvent> open_box = registerSound("advancearmy.open_box");
 	public static final RegistryObject<SoundEvent> throw_m67 = registerSound("advancearmy.throw_m67");
 	public static final RegistryObject<SoundEvent> exp_m67 = registerSound("advancearmy.exp_m67");
-
+	public static final RegistryObject<SoundEvent> mirage_fire = registerSound("advancearmy.mirage_fire");
 	public static final RegistryObject<SoundEvent> fire_92fs = registerSound("advancearmy.fire_92fs");
 	public static final RegistryObject<SoundEvent> m16_fire = registerSound("advancearmy.m16_fire");
 	public static final RegistryObject<SoundEvent> svd_fire = registerSound("advancearmy.svd_fire");
@@ -78,11 +73,12 @@ public class SASoundEvent {
 	public static final RegistryObject<SoundEvent> fire_smaw = registerSound("advancearmy.fire_smaw");
 	public static final RegistryObject<SoundEvent> move_ah64 = registerSound("advancearmy.move_ah64");
 	public static final RegistryObject<SoundEvent> fire_rpg7 = registerSound("advancearmy.fire_rpg7");
+	
 	public static final RegistryObject<SoundEvent> fire_gat = registerSound("advancearmy.fire_gat");
 	public static final RegistryObject<SoundEvent> gt_say = registerSound("advancearmy.gt_say");
 	public static final RegistryObject<SoundEvent> apa_hurt = registerSound("advancearmy.apa_hurt");
 	public static final RegistryObject<SoundEvent> apa_die = registerSound("advancearmy.apa_die");
-
+	
 	public static final RegistryObject<SoundEvent> fire_grenade = registerSound("advancearmy.fire_grenade");
 	public static final RegistryObject<SoundEvent> throw_grenade = registerSound("advancearmy.throw_grenade");
 	public static final RegistryObject<SoundEvent> fire_skyfire = registerSound("advancearmy.fire_skyfire");
@@ -121,7 +117,24 @@ public class SASoundEvent {
 	public static final RegistryObject<SoundEvent> move_vodnik = registerSound("advancearmy.move_vodnik");
 	public static final RegistryObject<SoundEvent> start_hmmwv = registerSound("advancearmy.start_hmmwv");
 	public static final RegistryObject<SoundEvent> fire_d30 = registerSound("advancearmy.fire_d30");
-
+	
+	public static final RegistryObject<SoundEvent> reload_mag = registerSound("advancearmy.reload_mag");//
+	
+	public static final RegistryObject<SoundEvent> fire_type85 = registerSound("advancearmy.fire_type85");
+	public static final RegistryObject<SoundEvent> fire_m2hb = registerSound("advancearmy.fire_m2hb");
+	public static final RegistryObject<SoundEvent> fire_kord = registerSound("advancearmy.fire_kord");
+	public static final RegistryObject<SoundEvent> fire_type85_3p = registerSound("advancearmy.fire_type85_3p");
+	public static final RegistryObject<SoundEvent> fire_m2hb_3p = registerSound("advancearmy.fire_m2hb_3p");
+	public static final RegistryObject<SoundEvent> fire_kord_3p = registerSound("advancearmy.fire_kord_3p");
+	
+	public static final RegistryObject<SoundEvent> fire_usvg = registerSound("advancearmy.fire_usvg");
+	public static final RegistryObject<SoundEvent> fire_usvg_3p = registerSound("advancearmy.fire_usvg_3p");
+	public static final RegistryObject<SoundEvent> fire_ruvg = registerSound("advancearmy.fire_ruvg");
+	public static final RegistryObject<SoundEvent> fire_ruvg_3p = registerSound("advancearmy.fire_ruvg_3p");
+	public static final RegistryObject<SoundEvent> fire_cnvg = registerSound("advancearmy.fire_cnvg");
+	public static final RegistryObject<SoundEvent> fire_cnvg_3p = registerSound("advancearmy.fire_cnvg_3p");
+	
+	
 	public static final RegistryObject<SoundEvent> fire_lw155 = registerSound("advancearmy.fire_lw155");
 	public static final RegistryObject<SoundEvent> fire_tow = registerSound("advancearmy.fire_tow");
 	public static final RegistryObject<SoundEvent> fire_stin = registerSound("advancearmy.fire_stin");
@@ -184,22 +197,8 @@ public class SASoundEvent {
 		
 	public static final RegistryObject<SoundEvent> fire_reb = registerSound("advancearmy.fire_reb");
 	public static final RegistryObject<SoundEvent> fire_ran = registerSound("advancearmy.fire_ran");
-	
-	public static final RegistryObject<SoundEvent> reload_mag = registerSound("advancearmy.reload_mag");//
-	public static final RegistryObject<SoundEvent> fire_m2hb = registerSound("advancearmy.fire_m2hb");
-	public static final RegistryObject<SoundEvent> fire_kord = registerSound("advancearmy.fire_kord");
-	public static final RegistryObject<SoundEvent> fire_type85 = registerSound("advancearmy.fire_type85");
-	public static final RegistryObject<SoundEvent> fire_type85_3p = registerSound("advancearmy.fire_type85_3p");
-	public static final RegistryObject<SoundEvent> fire_m2hb_3p = registerSound("advancearmy.fire_m2hb_3p");
-	public static final RegistryObject<SoundEvent> fire_kord_3p = registerSound("advancearmy.fire_kord_3p");
-	
+
 	public static final RegistryObject<SoundEvent> fire_jp = registerSound("advancearmy.fire_jp");
-	public static final RegistryObject<SoundEvent> fire_usvg = registerSound("advancearmy.fire_usvg");
-	public static final RegistryObject<SoundEvent> fire_usvg_3p = registerSound("advancearmy.fire_usvg_3p");
-	public static final RegistryObject<SoundEvent> fire_ruvg = registerSound("advancearmy.fire_ruvg");
-	public static final RegistryObject<SoundEvent> fire_ruvg_3p = registerSound("advancearmy.fire_ruvg_3p");
-	public static final RegistryObject<SoundEvent> fire_cnvg = registerSound("advancearmy.fire_cnvg");
-	public static final RegistryObject<SoundEvent> fire_cnvg_3p = registerSound("advancearmy.fire_cnvg_3p");
 	
 	public static final RegistryObject<SoundEvent> fire_m1a2 = registerSound("advancearmy.fire_m1a2");
 	public static final RegistryObject<SoundEvent> reload_m1a2 = registerSound("advancearmy.reload_m1a2");
@@ -233,6 +232,6 @@ public class SASoundEvent {
 	public static final RegistryObject<SoundEvent> sickle_land = registerSound("advancearmy.sickle_land");
     private static RegistryObject<SoundEvent> registerSound(String id)
     {
-		return REGISTER.register(id, () -> SoundEvent.createVariableRangeEvent(ResourceLocation.tryParse(AdvanceArmy.MODID+":"+id)));
-	}
+        return SASoundEvent.REGISTER.register(id, () -> new SoundEvent(new ResourceLocation(AdvanceArmy.MOD_ID, id)));
+    }
 }

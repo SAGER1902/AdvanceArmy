@@ -1,43 +1,42 @@
 package advancearmy.entity.land;
-import javax.annotation.Nullable;
+import net.minecraft.util.DamageSource;
 import net.minecraftforge.fml.ModList;
-
-import net.minecraft.world.level.Level;                            // 替换 World
-import net.minecraft.world.level.ServerLevelAccessor;              // 替换 IServerWorld
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier; // 替换 AttributeModifierMap
-import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.player.Player;                   // 替换 PlayerEntity
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.Mth;                                     // 替换 MathHelper
-import net.minecraft.world.entity.PathfinderMob;                   // 替换 CreatureEntity (通常)
-import net.minecraft.world.entity.Mob;                             // 或者使用 Mob
-import net.minecraft.nbt.CompoundTag;                             // 替换 CompoundNBT
-import net.minecraft.world.entity.SpawnGroupData;                  // 替换 ILivingEntityData
-import net.minecraft.world.entity.MobSpawnType;                    // 替换 SpawnReason
-import net.minecraft.world.DifficultyInstance;
-import net.minecraftforge.network.PlayMessages;
-import net.minecraft.world.entity.Entity;
-import java.util.List;
-import net.minecraft.world.entity.monster.Enemy;
-import wmlib.api.ITool;
-
-import safx.SagerFX;
-import wmlib.api.IArmy;
-import wmlib.common.living.PL_LandMove;
-import wmlib.common.living.AI_TankSet;
+import net.minecraft.world.World;
+import net.minecraft.entity.ai.attributes.AttributeModifierMap;
+import net.minecraft.entity.ai.attributes.Attributes;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.Entity;
+import net.minecraftforge.fml.network.FMLPlayMessages;
 import wmlib.common.living.WeaponVehicleBase;
-import advancearmy.util.SummonEntity;
-import advancearmy.entity.EntitySA_Seat;
-import advancearmy.event.SASoundEvent;
 import advancearmy.entity.ai.AI_EntityWeapon;
 import advancearmy.AdvanceArmy;
 import advancearmy.event.SASoundEvent;
-import advancearmy.init.ModEntities;
-import advancearmy.util.TargetSelect;
+import safx.SagerFX;
+import net.minecraft.util.ResourceLocation;
+import wmlib.client.obj.SAObjModel;
+import advancearmy.event.SASoundEvent;
+import net.minecraft.util.math.MathHelper;
+import wmlib.common.living.PL_LandMove;
+import wmlib.common.living.AI_TankSet;
+import advancearmy.entity.EntitySA_Seat;
+import net.minecraft.util.text.TranslationTextComponent;
+import wmlib.api.IArmy;
+import net.minecraft.entity.CreatureEntity;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.entity.ILivingEntityData;
+import net.minecraft.entity.SpawnReason;
+import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.IServerWorld;
+import advancearmy.util.SummonEntity;
+import com.hungteen.pvz.common.entity.zombie.PVZZombieEntity;
+import net.minecraft.entity.monster.IMob;
+import wmlib.api.ITool;
+import javax.annotation.Nullable;
+import java.util.List;
 public class EntitySA_Bike extends WeaponVehicleBase implements IArmy{
-	public EntitySA_Bike(EntityType<? extends EntitySA_Bike> sodier, Level worldIn) {
+	public EntitySA_Bike(EntityType<? extends EntitySA_Bike> sodier, World worldIn) {
 		super(sodier, worldIn);
 		seatPosX[0] = 0F;
 		seatPosY[0] = 0.8F;
@@ -56,10 +55,11 @@ public class EntitySA_Bike extends WeaponVehicleBase implements IArmy{
 		this.throttleMin = -2F;
 		this.thFrontSpeed = 0.3F;
 		this.thBackSpeed = -0.3F;
-		this.setMaxUpStep(1.5F);
+		this.maxUpStep = 1.5F;
+		
 	}
 	public ResourceLocation getIcon1(){
-		return ResourceLocation.tryParse("advancearmy:textures/item/item_spawn_bike.png");
+		return new ResourceLocation("advancearmy:textures/item/item_spawn_bike.png");
 	}
 	public ResourceLocation getIcon2(){
 		return null;
@@ -74,10 +74,7 @@ public class EntitySA_Bike extends WeaponVehicleBase implements IArmy{
 		this.setChoose(stack);
 	}
 	public void setMove(int id, int x, int y, int z){
-		this.setMoveType(id);
-		this.setMovePosX(x);
-		this.setMovePosY(y);
-		this.setMovePosZ(z);
+		//this.setMoveType(id);
 	}
 	public boolean getSelect(){
 		return this.getChoose() && this.getTargetType()==3;
@@ -115,30 +112,32 @@ public class EntitySA_Bike extends WeaponVehicleBase implements IArmy{
 	}
 	
 	public float rote_wheel = 0;
-	public EntitySA_Bike(PlayMessages.SpawnEntity packet, Level worldIn) {//
-		super(ModEntities.ENTITY_BIKE.get(), worldIn);
+	public EntitySA_Bike(FMLPlayMessages.SpawnEntity packet, World worldIn) {//
+		super(AdvanceArmy.ENTITY_BIKE, worldIn);
 	}
 	public void tick() {
 		super.tick();
 		if(this.getHealth()>0){
 			if(this.canAddPassenger(null)){
-				EntitySA_Seat seat = new EntitySA_Seat(ModEntities.ENTITY_SEAT.get(), this.level());
+				EntitySA_Seat seat = new EntitySA_Seat(AdvanceArmy.ENTITY_SEAT, this.level);
 				seat.moveTo(this.getX(), this.getY()+1, this.getZ(), 0, 0);
-				this.level().addFreshEntity(seat);
+				this.level.addFreshEntity(seat);
 				seat.startRiding(this);
 			}
 			float f1 = this.yHeadRot * (2 * (float) Math.PI / 360);//
 			AI_TankSet.set(this, SASoundEvent.move_vodnik.get(),0.15F, f1, this.MoveSpeed, 0.1F, false);//
-			if (this.getFirstSeat() != null && this.getFirstSeat().getControllingPassenger()!=null) {
-				if(this.getTargetType()>0)this.setTargetType(0);//
-				EntitySA_Seat seat = (EntitySA_Seat)this.getFirstSeat();
-				Player player = (Player)seat.getControllingPassenger();
-				PL_LandMove.moveCarMode(player, this, this.MoveSpeed, turnSpeed);
+			if (this.getFirstSeat() != null && this.getFirstSeat().getControllingPassenger()!=null){
+				if (this.getFirstSeat() != null) {
+					if(this.getTargetType()>0)this.setTargetType(0);//
+					EntitySA_Seat seat = (EntitySA_Seat)this.getFirstSeat();
+					PlayerEntity player = (PlayerEntity)seat.getControllingPassenger();
+					PL_LandMove.moveCarMode(player, this, this.MoveSpeed, turnSpeed);
+				}
 			}else{
 				if(this.getTargetType()==0)this.setTargetType(1);//
 			}
 			if(this.getTargetType()>0){
-				if (this.getFirstSeat() != null){
+				if (this.getFirstSeat() != null) {
 					EntitySA_Seat seat = (EntitySA_Seat)this.getFirstSeat();
 					if(seat.getTargetType()==0&&this.enc_soul==0){
 						if(this.getTargetType()!=1)this.setTargetType(1);
@@ -149,8 +148,9 @@ public class EntitySA_Bike extends WeaponVehicleBase implements IArmy{
 					if(seat.getTargetType()==3||this.enc_soul>0)if(this.getTargetType()!=3){
 						this.setTargetType(3);
 					}
+					
 					if(seat.getNpcPassenger()!=null){
-						PathfinderMob gunner = (PathfinderMob)seat.getNpcPassenger();
+						CreatureEntity gunner = (CreatureEntity)seat.getNpcPassenger();
 						this.ai_move(gunner.getTarget(), MoveSpeed, 30, 30);
 					}
 				}
@@ -182,11 +182,11 @@ public class EntitySA_Bike extends WeaponVehicleBase implements IArmy{
 			}
 			if(this.getTargetType()!=1){
 				if(this.tracktick % 5 == 0 && this.throttle>0){//
-					List<Entity> list = this.level().getEntities(this, this.getBoundingBox().inflate(1D));
+					List<Entity> list = this.level.getEntities(this, this.getBoundingBox().inflate(2D));
 					for(int k2 = 0; k2 < list.size(); ++k2) {
 						Entity attackentity = list.get(k2);
 						if(attackentity instanceof LivingEntity && ((LivingEntity)attackentity).getHealth()>0){
-							if(this.CanAttack(attackentity))attackentity.hurt(this.damageSources().thrown(this, this), this.getBbHeight()*this.getBbWidth()+this.throttle);
+							/*if(this.CanAttack(attackentity))*/attackentity.hurt(DamageSource.thrown(this, this), 2+this.throttle);
 						}
 					}
 				}
@@ -197,14 +197,19 @@ public class EntitySA_Bike extends WeaponVehicleBase implements IArmy{
     public boolean CanAttack(Entity entity){
 		if(entity instanceof LivingEntity && ((LivingEntity) entity).getHealth() > 0.0F && this.getTargetType()!=1){
 			if(this.getTargetType()==2){
-				return TargetSelect.mobCanAttack(this,entity,this.getTarget());
+				return !(entity instanceof IMob||entity instanceof ITool);
 			}else{
-				return entity instanceof Enemy;
+				if(ModList.get().isLoaded("pvz")){
+					return entity instanceof IMob||entity instanceof PVZZombieEntity;
+				}else{
+					return entity instanceof IMob;
+				}
 			}
     	}else{
 			return false;
 		}
-    }	
+    }
+	
 	float body_yaw;
 	public void ai_move(LivingEntity target, float MoveSpeed, double max, double range1) {
 		boolean crash = false;
@@ -224,10 +229,10 @@ public class EntitySA_Bike extends WeaponVehicleBase implements IArmy{
 				double ddx = Math.abs(dx);
 				double ddz = Math.abs(dz);
 				if(ddx>5||ddz>5){
-					this.targetYaw = (float) Mth.atan2(dz, dx) * (180F / (float) Math.PI) - 90.0f;
+					this.targetYaw = (float) MathHelper.atan2(dz, dx) * (180F / (float) Math.PI) - 90.0f;
 					this.targetYaw = this.clampYaw(this.targetYaw);
 					this.setForwardMove(2);
-					float f3 = (float) (this.targetYaw-this.getYRot());// -180 ~ 0 ~ 180
+					float f3 = (float) (this.targetYaw-this.yRot);// -180 ~ 0 ~ 180
 					f3 = this.clampYaw(f3);
 					if(f3>2){// +1
 						this.body_yaw+=2;
@@ -238,10 +243,9 @@ public class EntitySA_Bike extends WeaponVehicleBase implements IArmy{
 						this.body_yaw = this.targetYaw;
 					}
 					this.setYHeadRot(this.body_yaw);//位移
-					this.setYRot(this.body_yaw);
-					this.yRotO = this.yBodyRot = this.body_yaw;//
+					this.yRotO = this.yRot = this.yBodyRot = this.body_yaw;//
 				}else{
-					if(this.getMoveType()==2){
+					if(this.getMoveType()!=4){
 						this.setMoveType(3);
 						this.setMovePosX(0);
 						//this.setMovePosY(0);
@@ -254,14 +258,14 @@ public class EntitySA_Bike extends WeaponVehicleBase implements IArmy{
 					if (target.getHealth() > 0.0F) {
 						double dx = target.getX() - this.getX();
 						double dz = target.getZ() - this.getZ();
-						double dis = Math.sqrt(dx * dx + dz * dz);
+						double dis = (double) MathHelper.sqrt(dx * dx + dz * dz);
 
 						if(this.getMoveType() != 3/*&&!this.getSelect()*/){//
-							this.targetYaw = (float) Mth.atan2(dz, dx) * (180F / (float) Math.PI) - 90.0f;
+							this.targetYaw = (float) MathHelper.atan2(dz, dx) * (180F / (float) Math.PI) - 90.0f;
 							this.targetYaw = this.clampYaw(this.targetYaw);
 							this.setForwardMove(2);
 							if (dis>10) {
-								float f3 = (float) (this.targetYaw-this.getYRot());// -180 ~ 0 ~ 180
+								float f3 = (float) (this.targetYaw-this.yRot);// -180 ~ 0 ~ 180
 								f3 = this.clampYaw(f3);
 								if(f3>2){// +1
 									this.body_yaw+=2;
@@ -276,8 +280,7 @@ public class EntitySA_Bike extends WeaponVehicleBase implements IArmy{
 								this.setForwardMove(2);
 							}
 							this.setYHeadRot(this.body_yaw);//位移
-							this.setYRot(this.body_yaw);
-							this.yRotO = this.yBodyRot = this.body_yaw;//
+							this.yRotO = this.yRot = this.yBodyRot = this.body_yaw;//
 						}
 					}
 				}
@@ -310,15 +313,13 @@ public class EntitySA_Bike extends WeaponVehicleBase implements IArmy{
 			}*/
 		}
 	}
-	//@Nullable
-	//public ILivingEntityData finalizeSpawn(IServerWorld world, DifficultyInstance diff, SpawnReason reason, @Nullable ILivingEntityData data ,@Nullable CompoundNBT nbt) {
-	@Override
-	public SpawnGroupData finalizeSpawn(ServerLevelAccessor levelIn, DifficultyInstance diff, MobSpawnType reason, @Nullable SpawnGroupData data, @Nullable CompoundTag nbt) {
-		data = super.finalizeSpawn(levelIn, diff, reason, data, nbt);
-		if(levelIn.getRandom().nextInt(2)==1){
-			SummonEntity.wildSummon(this.level(), this.getX(), this.getY()+1, this.getZ(), 34, true, null,1);
+	@Nullable
+	public ILivingEntityData finalizeSpawn(IServerWorld world, DifficultyInstance diff, SpawnReason reason, @Nullable ILivingEntityData data ,@Nullable CompoundNBT nbt) {
+		data = super.finalizeSpawn(world, diff, reason, data, nbt);
+		if(this.level.random.nextInt(2)==1){
+			SummonEntity.wildSummon(this.level, this.getX(), this.getY()+1, this.getZ(), 34, true, null,1);
 		}else{
-			SummonEntity.wildSummon(this.level(), this.getX(), this.getY()+1, this.getZ(), 33, true, null,1);
+			SummonEntity.wildSummon(this.level, this.getX(), this.getY()+1, this.getZ(), 33, true, null,1);
 		}
 		return data;
 	}

@@ -1,27 +1,26 @@
 package advancearmy.entity.air;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
+
 import net.minecraftforge.fml.ModList;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.network.PlayMessages;
+import net.minecraft.world.World;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.EntityType;
+import net.minecraftforge.fml.network.FMLPlayMessages;
 import wmlib.common.living.WeaponVehicleBase;
 import advancearmy.entity.ai.AI_EntityWeapon;
 import advancearmy.AdvanceArmy;
 import advancearmy.event.SASoundEvent;
-import advancearmy.init.ModEntities;
-import net.minecraft.resources.ResourceLocation;
+
+import net.minecraft.util.ResourceLocation;
 import wmlib.client.obj.SAObjModel;
 import advancearmy.entity.EntitySA_AirBase;
-import net.minecraft.util.Mth;
+import net.minecraft.util.math.MathHelper;
 import advancearmy.entity.EntitySA_Seat;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.entity.player.PlayerEntity;
 import safx.util.EntityCondition;
 import safx.SagerFX;
 public class EntitySA_Plane1 extends EntitySA_AirBase{
-	public EntitySA_Plane1(EntityType<? extends EntitySA_Plane1> sodier, Level worldIn) {
+	public EntitySA_Plane1(EntityType<? extends EntitySA_Plane1> sodier, World worldIn) {
 		super(sodier, worldIn);
 		seatPosX[0] = 0;
 		seatPosY[0] = 1.4F;
@@ -41,7 +40,7 @@ public class EntitySA_Plane1 extends EntitySA_AirBase{
 		seatView3Z=-12F;
 		this.noCulling = true;
 		this.icon1tex = null;
-		this.icon2tex = ResourceLocation.tryParse("advancearmy:textures/hud/plane1icon.png");
+		this.icon2tex = new ResourceLocation("advancearmy:textures/hud/plane1icon.png");
 		this.w1aa = false;
 		this.w1max = 16;
 		this.w1min = -10;
@@ -52,10 +51,10 @@ public class EntitySA_Plane1 extends EntitySA_AirBase{
 		this.w2aim = 5;
 		this.stayrange = 40;
 		this.min_height = 10;
-		this.can_follow = true;
+		
         this.MoveSpeed = 0.034F;
         this.turnSpeed = 1.8F;
-		this.setMaxUpStep(1.5F);
+		this.maxUpStep = 1.5F;
 		this.flyPitchMax = 90F;
 		this.flyPitchMin = -90F;
         this.throttleMax = 20F;
@@ -63,7 +62,7 @@ public class EntitySA_Plane1 extends EntitySA_AirBase{
 		this.thFrontSpeed = 0.2F;
 		this.thBackSpeed = -0.15F;
 		this.obj = new SAObjModel("advancearmy:textures/mob/plane1.obj");
-		this.tex = ResourceLocation.tryParse("advancearmy:textures/mob/plane1.png");
+		this.tex = new ResourceLocation("advancearmy:textures/mob/plane1.png");
 		this.firesound1 = SASoundEvent.bomb_release.get();
 		this.firesound2 = SASoundEvent.fire_ruvg.get();
 		this.ammo2=3;
@@ -85,27 +84,22 @@ public class EntitySA_Plane1 extends EntitySA_AirBase{
 		this.rotorcount = 1;
 		this.rotor_rotez[0]=10;
 		this.setRotor(0,0, 1.61F, 4.7F);
-		this.rotortex = ResourceLocation.tryParse("advancearmy:textures/mob/plane1rotor.png");
+		this.rotortex = new ResourceLocation("advancearmy:textures/mob/plane1rotor.png");
 		
 	}
-	public EntitySA_Plane1(PlayMessages.SpawnEntity packet, Level worldIn) {
-		super(ModEntities.ENTITY_PLANE1.get(), worldIn);
+	public EntitySA_Plane1(FMLPlayMessages.SpawnEntity packet, World worldIn) {
+		super(AdvanceArmy.ENTITY_PLANE1, worldIn);
 	}
-	public static AttributeSupplier.Builder createAttributes() {
-        return EntitySA_Plane1.createMobAttributes().add(Attributes.KNOCKBACK_RESISTANCE, (double) 10.0D)
-					.add(Attributes.MAX_HEALTH, 50.0D)
-					.add(Attributes.FOLLOW_RANGE, 200.0D)
-					.add(Attributes.ARMOR, (double) 3D);
-    }
+	
 	/*boolean trail = false;
 	public void tick() {
 		super.tick();
 		if(this.getHealth()>0){
-			if(!this.onGround() && this.getMovePitch()<-1F && this.movePower>10){
+			if(!this.isOnGround() && (this.getMovePitch()>0.1F||this.getMovePitch()<-0.1F||this.getMoveYaw()>0.1F||this.getMoveYaw()<-0.1F)){
 				if(!trail){
 					if(ModList.get().isLoaded("safx")){
-						if(this.level().isClientSide)SagerFX.proxy.createFXOnEntityWithOffset("PlaneTrail", this, 3f, -0.5f, -3.0f, true, EntityCondition.ENTITY_PLANE);
-						if(this.level().isClientSide)SagerFX.proxy.createFXOnEntityWithOffset("PlaneTrail", this, -3f, -0.5f, -3.0f, true, EntityCondition.ENTITY_PLANE);
+						if(this.level.isClientSide)SagerFX.proxy.createFXOnEntityWithOffset("PlaneTrail", this, 3f, -0.5f, -3.0f, true, EntityCondition.ENTITY_PLANE);
+						if(this.level.isClientSide)SagerFX.proxy.createFXOnEntityWithOffset("PlaneTrail", this, -3f, -0.5f, -3.0f, true, EntityCondition.ENTITY_PLANE);
 					}
 					trail = true;
 				}
@@ -125,12 +119,12 @@ public class EntitySA_Plane1 extends EntitySA_AirBase{
 		String model = "advancearmy:textures/entity/bullet/smallbomb.obj";
 		String tex = "advancearmy:textures/entity/bullet/bomb.png";
 		LivingEntity shooter = this;
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
 		
 		
 		AI_EntityWeapon.Attacktask(this, shooter, null, 3, model, tex, null, null, firesound1,
 		1F, fireX,0,0,0.53F,-2.89F,
-		this.getX(), this.getY(), this.getZ(),this.getYRot(), this.turretPitch,
+		this.getX(), this.getY(), this.getZ(),this.yRot, this.turretPitch,
 		50, 1F, 1.1F, 3, false, 1, 0.04F, 500, 3);
 	}
 	public void weaponActive2(){
@@ -143,10 +137,10 @@ public class EntitySA_Plane1 extends EntitySA_AirBase{
 		}else{
 			fireX = -this.fireposX2;
 		}
-		if(this.getFirstSeat() != null && this.getFirstSeat().getAnyPassenger()!=null)shooter = this.getFirstSeat().getAnyPassenger();
+		if(this.getFirstSeat() != null && ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger()!=null)shooter = ((EntitySA_Seat)this.getFirstSeat()).getAnyPassenger();
 		AI_EntityWeapon.Attacktask(this, shooter, null, 0, model, tex, "SmokeGun", null, firesound2,
 		1F, fireX,this.fireposY2,this.fireposZ2,this.firebaseX,this.firebaseZ,
-		this.getX(), this.getY(), this.getZ(),this.getYRot(), this.turretPitch,
+		this.getX(), this.getY(), this.getZ(),this.yRot, this.turretPitch,
 		9, 6F, 1.5F, 1, false, 1, 0.01F, 50, 0);
 	}
 }

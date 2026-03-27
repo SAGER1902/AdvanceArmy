@@ -7,60 +7,73 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.function.Predicate;
 import javax.annotation.Nullable;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
+import net.minecraft.entity.CreatureAttribute;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntitySize;
+import net.minecraft.entity.EntitySpawnPlacementRegistry;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.ILivingEntityData;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.Pose;
+import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.ai.attributes.AttributeModifier;
+import net.minecraft.entity.ai.attributes.AttributeModifierMap;
+import net.minecraft.entity.ai.attributes.Attributes;
+import net.minecraft.entity.ai.attributes.ModifiableAttributeInstance;
+
+import net.minecraft.entity.merchant.villager.AbstractVillagerEntity;
+import net.minecraft.entity.merchant.villager.VillagerEntity;
+import net.minecraft.entity.passive.ChickenEntity;
+import net.minecraft.entity.passive.IronGolemEntity;
+import net.minecraft.entity.passive.TurtleEntity;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.inventory.EquipmentSlotType;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.NBTDynamicOps;
+import net.minecraft.network.datasync.DataParameter;
+import net.minecraft.network.datasync.DataSerializers;
+import net.minecraft.network.datasync.EntityDataManager;
+import net.minecraft.pathfinding.GroundPathNavigator;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.util.DamageSource;
+import net.minecraft.util.EntityPredicates;
+import net.minecraft.util.GroundPathHelper;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.SoundEvent;
+import net.minecraft.util.SoundEvents;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.Difficulty;
-import net.minecraft.world.level.Level;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageTypes;
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.scores.Team;
-import net.minecraft.network.syncher.EntityDataAccessor;  
-import net.minecraft.network.syncher.EntityDataSerializers;
-import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtUtils;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.MoverType;
-import net.minecraft.world.entity.EntityDimensions;
-import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.network.PlayMessages;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.TamableAnimal;
-import net.minecraft.world.entity.AgeableMob;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Item;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.item.Items;
-import net.minecraft.network.chat.Component;
-import net.minecraft.util.Mth;
-
-import advancearmy.event.SASoundEvent;
-import advancearmy.item.ItemSpawn;
+import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.GameRules;
+import net.minecraft.world.IServerWorld;
+import net.minecraft.world.IWorld;
+import net.minecraft.world.World;
+import net.minecraft.world.server.ServerWorld;
+import net.minecraft.world.spawner.WorldEntitySpawner;
+import net.minecraft.entity.monster.IMob;
+import net.minecraft.entity.MobEntity;
 import advancearmy.AdvanceArmy;
-import advancearmy.init.ModEntities;
-import wmlib.api.IHealthBar;
-import wmlib.api.IBuilding;
-import wmlib.api.IEnemy;
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.Style;
+import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.ActionResultType;
+import net.minecraft.util.Hand;
+import net.minecraft.item.Item;
+
+import net.minecraftforge.fml.network.FMLPlayMessages;
+import net.minecraftforge.fml.network.NetworkHooks;
+
+import net.minecraft.world.server.ServerBossInfo;
+import net.minecraft.world.BossInfo;
 
 import wmlib.api.IEnemy;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.entity.player.ServerPlayerEntity;
 import wmlib.common.living.WeaponVehicleBase;
 
 import advancearmy.entity.air.EntitySA_Plane1;
@@ -78,9 +91,10 @@ import advancearmy.entity.mob.ERO_Creeper;
 
 import wmlib.common.living.EntityWMVehicleBase;
 import wmlib.api.ITool;
-import net.minecraft.tags.ItemTags;
-public class CreatureRespawn extends Mob implements ITool{
-	public CreatureRespawn(EntityType<? extends CreatureRespawn> p_i48549_1_, Level p_i48549_2_) {
+
+import net.minecraft.item.PickaxeItem;
+public class CreatureRespawn extends MobEntity implements ITool{
+	public CreatureRespawn(EntityType<? extends CreatureRespawn> p_i48549_1_, World p_i48549_2_) {
 	  super(p_i48549_1_, p_i48549_2_);
 	  this.noCulling = true;
 	}
@@ -93,24 +107,20 @@ public class CreatureRespawn extends Mob implements ITool{
       PURPLE("purple", TextFormatting.DARK_BLUE),
       WHITE("white", TextFormatting.WHITE);
 	*/
-	//private final ServerBossEvent FriendCount = (ServerBossEvent)(new ServerBossEvent(this.getDisplayName(), BossEvent.BossBarColor.GREEN, BossEvent.BossBarOverlay.PROGRESS))/*.setDarkenScreen(true)*/;
-	//private final ServerBossEvent EnemyCount = (ServerBossEvent)(new ServerBossEvent(this.getDisplayName(), BossEvent.BossBarColor.PURPLE, BossEvent.BossBarOverlay.PROGRESS))/*.setDarkenScreen(true)*/;
-	public CreatureRespawn(PlayMessages.SpawnEntity packet, Level worldIn) {
-		super(ModEntities.ENTITY_CRES.get(), worldIn);
+	//private final ServerBossInfo FriendCount = (ServerBossInfo)(new ServerBossInfo(this.getDisplayName(), BossInfo.Color.GREEN, BossInfo.Overlay.PROGRESS))/*.setDarkenScreen(true)*/;
+	//private final ServerBossInfo EnemyCount = (ServerBossInfo)(new ServerBossInfo(this.getDisplayName(), BossInfo.Color.PURPLE, BossInfo.Overlay.PROGRESS))/*.setDarkenScreen(true)*/;
+	public CreatureRespawn(FMLPlayMessages.SpawnEntity packet, World worldIn) {
+		super(AdvanceArmy.ENTITY_CRES, worldIn);
 	}
-	public static AttributeSupplier.Builder createAttributes() {
-        return CreatureRespawn.createMobAttributes();
-    }
-	
 	public void checkDespawn() {
 	}
-	private static final EntityDataAccessor<Integer> RespawnCount = SynchedEntityData.<Integer>defineId(CreatureRespawn.class, EntityDataSerializers.INT);
-	public void addAdditionalSaveData(CompoundTag compound)
+	private static final DataParameter<Integer> RespawnCount = EntityDataManager.<Integer>defineId(CreatureRespawn.class, DataSerializers.INT);
+	public void addAdditionalSaveData(CompoundNBT compound)
 	{
 		super.addAdditionalSaveData(compound);
 		compound.putInt("RespawnCount", this.getRespawnCount());
 	}
-	public void readAdditionalSaveData(CompoundTag compound)
+	public void readAdditionalSaveData(CompoundNBT compound)
 	{
 	   super.readAdditionalSaveData(compound);
 	   this.setRespawnCount(compound.getInt("RespawnCount"));
@@ -126,64 +136,59 @@ public class CreatureRespawn extends Mob implements ITool{
 	public void setRespawnCount(int stack) {
 	this.entityData.set(RespawnCount, Integer.valueOf(stack));
 	}
-	public boolean canCollideWith(Entity entity) {
-		return false;
-	}
-	public void push(Entity entity) {
-		
-	}
+	
 	/*public boolean canBeCollidedWith() {//
 		return false;
 	}*/
-	public InteractionResult mobInteract(Player player, InteractionHand hand) {
+	public ActionResultType mobInteract(PlayerEntity player, Hand hand) {
 		if(player.isCreative()){
 			ItemStack heldItem = player.getItemInHand(hand);
 			Item item = heldItem.getItem();
 			if(!heldItem.isEmpty()){
-				if(heldItem.is(ItemTags.PICKAXES)&&player.isCrouching()){
-					if(!this.level().isClientSide){
-						this.discard();
-						player.sendSystemMessage(Component.translatable("Remove"));
-						return InteractionResult.SUCCESS;
+				if(heldItem.getItem() instanceof PickaxeItem && player.isCrouching()){
+					if(!this.level.isClientSide){
+						this.remove();
+						player.sendMessage(new TranslationTextComponent("Remove", new Object[0]), player.getUUID());
+						return ActionResultType.SUCCESS;
 					}
 				}
 				if(item == Items.GOLD_INGOT){
 					if(isEnemyRespawn){
-						if(!this.level().isClientSide)this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.DIAMOND));
-						return InteractionResult.SUCCESS;
+						if(!this.level.isClientSide)this.setItemSlot(EquipmentSlotType.MAINHAND, new ItemStack(Items.DIAMOND));
+						return ActionResultType.SUCCESS;
 					}else{
-						if(!this.level().isClientSide)this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_INGOT));
-						return InteractionResult.SUCCESS;
+						if(!this.level.isClientSide)this.setItemSlot(EquipmentSlotType.MAINHAND, new ItemStack(Items.IRON_INGOT));
+						return ActionResultType.SUCCESS;
 					}
 				}else{
-					player.sendSystemMessage(Component.translatable("use GOLD_INGOT click to change[Friend/Enemy]"));
+					player.sendMessage(new TranslationTextComponent("use GOLD_INGOT click to change[Friend/Enemy]", new Object[0]), player.getUUID());
 				}
 			}else{
 				if(player.isCrouching()){
 					this.setRespawnCount(0);
-					return InteractionResult.SUCCESS;
+					return ActionResultType.SUCCESS;
 				}else{
 					this.setRespawnCount(this.total_count);
-					return InteractionResult.SUCCESS;
+					return ActionResultType.SUCCESS;
 				}
 			}
-			player.sendSystemMessage(Component.translatable("------"));
+			player.sendMessage(new TranslationTextComponent("------", new Object[0]), player.getUUID());
 			if(isEnemyRespawn){
-				player.sendSystemMessage(Component.translatable("Enemy Spawner"));
+				player.sendMessage(new TranslationTextComponent("Enemy Spawner", new Object[0]), player.getUUID());
 			}else{
-				player.sendSystemMessage(Component.translatable("Friend Spawner"));
+				player.sendMessage(new TranslationTextComponent("Friend Spawner", new Object[0]), player.getUUID());
 			}
-			player.sendSystemMessage(Component.translatable("Max Count ="+this.total_count));
-			player.sendSystemMessage(Component.translatable("Now Count ="+this.getRespawnCount()));
-			player.sendSystemMessage(Component.translatable("======"));
+			player.sendMessage(new TranslationTextComponent("Max Count ="+this.total_count, new Object[0]), player.getUUID());
+			player.sendMessage(new TranslationTextComponent("Now Count ="+this.getRespawnCount(), new Object[0]), player.getUUID());
+			player.sendMessage(new TranslationTextComponent("======", new Object[0]), player.getUUID());
 		}
 		//return super.mobInteract(player, hand);
-		return InteractionResult.PASS;
+		return ActionResultType.PASS;
     }
 
 	public boolean isEnemyRespawn = false;
 	
-	/*public void startSeenByPlayer(ServerPlayer p_184178_1_) {
+	/*public void startSeenByPlayer(ServerPlayerEntity p_184178_1_) {
 	  super.startSeenByPlayer(p_184178_1_);
 	  if(isEnemyRespawn){
 		  this.EnemyCount.addPlayer(p_184178_1_);
@@ -191,7 +196,7 @@ public class CreatureRespawn extends Mob implements ITool{
 		  this.FriendCount.addPlayer(p_184178_1_);
 	  }
 	}
-	public void stopSeenByPlayer(ServerPlayer p_184203_1_) {
+	public void stopSeenByPlayer(ServerPlayerEntity p_184203_1_) {
 	  super.stopSeenByPlayer(p_184203_1_);
 	  if(isEnemyRespawn){
 			this.EnemyCount.removePlayer(p_184203_1_);
@@ -199,7 +204,7 @@ public class CreatureRespawn extends Mob implements ITool{
 			this.FriendCount.removePlayer(p_184203_1_);
 	  }
 	}
-	public void setCustomName(@Nullable Component p_200203_1_) {
+	public void setCustomName(@Nullable ITextComponent p_200203_1_) {
 		super.setCustomName(p_200203_1_);
 		//this.EnemyCount.setName(this.getDisplayName());
 		if(isEnemyRespawn){
@@ -231,9 +236,9 @@ public class CreatureRespawn extends Mob implements ITool{
     		this.setz=((int)this.getZ());
     	}
     	{
-			BlockPos blockpos = new BlockPos((int)(this.setx),(int)(this.sety - 1),(int)(this.setz));
-			BlockState iblockstate = this.level().getBlockState(blockpos);
-			if (this.setx != 0 && !iblockstate.isAir()){
+			BlockPos blockpos = new BlockPos(this.setx + 0.5,this.sety - 1,this.setz + 0.5);
+			BlockState iblockstate = this.level.getBlockState(blockpos);
+			if (this.setx != 0 && !iblockstate.isAir(this.level, blockpos)){
 				this.moveTo(this.setx,this.sety,this.setz);
 			}else{
 				this.moveTo(this.setx,this.getY(), this.setz);
@@ -252,27 +257,27 @@ public class CreatureRespawn extends Mob implements ITool{
 			}
 		}
 		/*if(this.isEnemyRespawn){
-			this.EnemyCount.setProgress(this.getRespawnCount() / 200);//this.getMoveY()
+			this.EnemyCount.setPercent(this.getRespawnCount() / 200);//this.getMoveY()
 		}else{
-			this.FriendCount.setProgress(this.getRespawnCount() / 200);
+			this.FriendCount.setPercent(this.getRespawnCount() / 200);
 		}*/
 		if (this.isAlive()){
 			if(cooltime6<50)++cooltime6;
-			/*if (!(this.level() instanceof ServerLevel)) {
+			/*if (!(this.level instanceof ServerWorld)) {
 				//return false;
 			}*/ else {
-				//ServerLevel serverworld = (ServerLevel)this.level();
-				int i = Mth.floor(this.getX());
-				int j = Mth.floor(this.getY());
-				int k = Mth.floor(this.getZ());
+				//ServerWorld serverworld = (ServerWorld)this.level;
+				int i = MathHelper.floor(this.getX());
+				int j = MathHelper.floor(this.getY());
+				int k = MathHelper.floor(this.getZ());
 				if(summontime<100)++summontime;
 				if(summontime>20 && this.getRespawnCount()>0){
 					int count = 0;
 					int ve = 0;
-					int i1 = i + Mth.nextInt(this.random, 2, 10) * Mth.nextInt(this.random, -1, 1);
-					int j1 = j + Mth.nextInt(this.random,1, 2);
-					int k1 = k + Mth.nextInt(this.random, 2, 10) * Mth.nextInt(this.random, -1, 1);
-					List<Entity> list = this.level().getEntities(this, this.getBoundingBox().inflate(200D, 100D, 200D));
+					int i1 = i + MathHelper.nextInt(this.random, 2, 10) * MathHelper.nextInt(this.random, -1, 1);
+					int j1 = j + MathHelper.nextInt(this.random,1, 2);
+					int k1 = k + MathHelper.nextInt(this.random, 2, 10) * MathHelper.nextInt(this.random, -1, 1);
+					List<Entity> list = this.level.getEntities(this, this.getBoundingBox().inflate(200D, 100D, 200D));
 					for(int k2 = 0; k2 < list.size(); ++k2) {
 						Entity ent = list.get(k2);
 						if(ent instanceof LivingEntity){
@@ -314,7 +319,7 @@ public class CreatureRespawn extends Mob implements ITool{
 										if(this.getRespawnCount()>0)this.setRespawnCount(this.getRespawnCount()-1);
 									}
 								}
-								if(ent instanceof Player){
+								if(ent instanceof PlayerEntity){
 									if(living.getHealth()>0){
 										++count;
 									}else{
@@ -324,58 +329,50 @@ public class CreatureRespawn extends Mob implements ITool{
 							}
 						}
 					}
-					if (!(this.level() instanceof ServerLevel)) {
+					if (!(this.level instanceof ServerWorld)) {
 						//return false;
 					}else{
-						ServerLevel serverworld = (ServerLevel)this.level();
+						ServerWorld serverworld = (ServerWorld)this.level;
 						if(count<max_summon){
 							if(summontime>50+count){
 								   BlockPos blockpos = new BlockPos(i1, j1, k1);
 								   if(isEnemyRespawn){
-										if(this.level().random.nextInt(6)==2){
-											ERO_Zombie army = new ERO_Zombie(ModEntities.ENTITY_EZOMBIE.get(), serverworld);
+										if(this.level.random.nextInt(6)==2){
+											ERO_Zombie army = new ERO_Zombie(AdvanceArmy.ENTITY_EZOMBIE, serverworld);
 											army.setPos((double)i1, (double)j1, (double)k1);
 											serverworld.addFreshEntity(army);
-										}else if(this.level().random.nextInt(6)==4){
-											ERO_Skeleton ent = new ERO_Skeleton(ModEntities.ENTITY_SKELETON.get(), serverworld);
+										}else if(this.level.random.nextInt(6)==4){
+											ERO_Skeleton ent = new ERO_Skeleton(AdvanceArmy.ENTITY_SKELETON, serverworld);
 											ent.setPos((double)i1, (double)j1, (double)k1);
 											serverworld.addFreshEntity(ent);
-										}else if(this.level().random.nextInt(5)==2){
-											ERO_Creeper ent = new ERO_Creeper(ModEntities.ENTITY_CREEPER.get(), serverworld);
+										}else if(this.level.random.nextInt(5)==2){
+											ERO_Creeper ent = new ERO_Creeper(AdvanceArmy.ENTITY_CREEPER, serverworld);
 											ent.setPos((double)i1, (double)j1, (double)k1);
 											serverworld.addFreshEntity(ent);
 										}
-										if(this.level().random.nextInt(3)==1){
-											ERO_Pillager ent = new ERO_Pillager(ModEntities.ENTITY_PI.get(), serverworld);
+										if(this.level.random.nextInt(3)==1){
+											ERO_Pillager ent = new ERO_Pillager(AdvanceArmy.ENTITY_PI, serverworld);
 											ent.setPos((double)i1, (double)j1, (double)k1);
 											serverworld.addFreshEntity(ent);
 										}else{
-											ERO_REB ent = new ERO_REB(ModEntities.ENTITY_REB.get(), serverworld);
+											ERO_REB ent = new ERO_REB(AdvanceArmy.ENTITY_REB, serverworld);
 											ent.setPos((double)i1, (double)j1, (double)k1);
 											serverworld.addFreshEntity(ent);
 										}
 								   }else{
-										if(this.level().random.nextInt(8)==1){
-											EntitySA_Conscript ent = new EntitySA_Conscript(ModEntities.ENTITY_CONS.get(), serverworld);
+										if(this.level.random.nextInt(8)==1){
+											EntitySA_Conscript ent = new EntitySA_Conscript(AdvanceArmy.ENTITY_CONS, serverworld);
 											ent.setPos((double)i1, (double)j1, (double)k1);
 											serverworld.addFreshEntity(ent);
-											if(this.level().getScoreboard().getPlayerTeam("AdvanceArmy")!=null){
-												this.level().getScoreboard().addPlayerToTeam(ent.getUUID().toString(), this.level().getScoreboard().getPlayerTeam("AdvanceArmy"));
-											}
-										}else if(this.level().random.nextInt(8)==2){
-											EntitySA_GI ent = new EntitySA_GI(ModEntities.ENTITY_GI.get(), serverworld);
+										}else
+										if(this.level.random.nextInt(8)==2){
+											EntitySA_GI ent = new EntitySA_GI(AdvanceArmy.ENTITY_GI, serverworld);
 											ent.setPos((double)i1, (double)j1, (double)k1);
 											serverworld.addFreshEntity(ent);
-											if(this.level().getScoreboard().getPlayerTeam("AdvanceArmy")!=null){
-												this.level().getScoreboard().addPlayerToTeam(ent.getUUID().toString(), this.level().getScoreboard().getPlayerTeam("AdvanceArmy"));
-											}
 										}else{
-											EntitySA_Soldier ent = new EntitySA_Soldier(ModEntities.ENTITY_SOLDIER.get(), serverworld);
-											ent.setPos((double)i1, (double)j1, (double)k1);
-											serverworld.addFreshEntity(ent);
-											if(this.level().getScoreboard().getPlayerTeam("AdvanceArmy")!=null){
-												this.level().getScoreboard().addPlayerToTeam(ent.getUUID().toString(), this.level().getScoreboard().getPlayerTeam("AdvanceArmy"));
-											}
+											EntitySA_Soldier army = new EntitySA_Soldier(AdvanceArmy.ENTITY_SOLDIER, serverworld);
+											army.setPos((double)i1, (double)j1, (double)k1);
+											serverworld.addFreshEntity(army);
 										}
 								   }
 								this.summontime = 0;
